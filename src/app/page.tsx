@@ -1,65 +1,142 @@
-import Image from "next/image";
+// src/app/page.tsx
+'use client';
+
+import WalletConnect from '@/components/WalletConnect';
+import { useAllProjects } from '@/hooks/useAllProjects';
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+  const { projects, loading } = useAllProjects();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading projects from blockchain...</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-green-800">
+              🌱 RetroFit Finance
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Invest in sustainable building upgrades and earn returns
+            </p>
+          </div>
+          <WalletConnect />
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+          <div className="bg-white rounded-lg shadow p-6 text-center">
+            <div className="text-2xl font-bold text-green-600">{projects.length}</div>
+            <div className="text-gray-600">Active Projects</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6 text-center">
+            <div className="text-2xl font-bold text-green-600">
+              ${projects.reduce((sum, p) => sum + parseFloat(p.raisedAmount), 0).toLocaleString()}
+            </div>
+            <div className="text-gray-600">Total Funded</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6 text-center">
+            <div className="text-2xl font-bold text-green-600">8.5%</div>
+            <div className="text-gray-600">Avg. Return</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6 text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {projects.reduce((sum, p) => sum + parseInt(p.investorCount), 0)}
+            </div>
+            <div className="text-gray-600">Active Investors</div>
+          </div>
+        </div>
+
+        {/* Projects Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {projects.map((project) => (
+            <div key={project.id} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+              <img 
+                src={project.image} 
+                alt={project.name}
+                className="w-full h-48 object-cover"
+              />
+              
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {project.name}
+                  </h3>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    project.status === 'Funding' 
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {project.status}
+                  </span>
+                </div>
+                
+                <p className="text-gray-600 text-sm mb-4">
+                  📍 {project.address}
+                </p>
+                
+                <p className="text-gray-700 mb-4 line-clamp-2">
+                  {project.description}
+                </p>
+
+                {/* Investor Count */}
+                <div className="flex justify-between items-center text-sm text-gray-600 mb-4">
+                  <div className="flex items-center gap-1">
+                    <span>👥</span>
+                    <span>{project.investorCount} investors</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span>📈</span>
+                    <span>{project.expectedReturn}</span>
+                  </div>
+                </div>
+
+                {/* Funding Progress */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm text-gray-600 mb-2">
+                    <span>Progress</span>
+                    <span>${parseFloat(project.raisedAmount).toLocaleString()} / ${parseFloat(project.targetAmount).toLocaleString()}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min((parseFloat(project.raisedAmount) / parseFloat(project.targetAmount)) * 100, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => window.location.href = `/projects/${project.id}`}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                >
+                  View Project Details
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t mt-16">
+        <div className="max-w-7xl mx-auto px-4 py-8 text-center text-gray-600">
+          <p>Building a sustainable future, one retrofit at a time.</p>
+        </div>
+      </footer>
     </div>
   );
 }
