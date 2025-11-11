@@ -16,6 +16,19 @@ export default function ProjectPage() {
   const [isInvestModalOpen, setIsInvestModalOpen] = useState(false);
   const [isResettingFunding, setIsResettingFunding] = useState(false);
 
+  const formatDateTime = useMemo(
+    () =>
+      (isoString: string) => {
+        if (!isoString) return '—';
+        const date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) {
+          return '—';
+        }
+        return date.toLocaleString();
+      },
+    []
+  );
+
   // Loading state - shows spinner while fetching data
   if (loading) {
     return (
@@ -51,19 +64,6 @@ export default function ProjectPage() {
       updateProjectInvestment(investmentAmount, investorWallet);
     }
   };
-
-  const formatDateTime = useMemo(
-    () =>
-      (isoString: string) => {
-        if (!isoString) return '—';
-        const date = new Date(isoString);
-        if (Number.isNaN(date.getTime())) {
-          return '—';
-        }
-        return date.toLocaleString();
-      },
-    []
-  );
 
   const formatWallet = (wallet: string) => {
     if (!wallet) return '—';
