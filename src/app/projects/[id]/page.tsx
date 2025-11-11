@@ -12,8 +12,9 @@ import { useProjectData } from '@/hooks/useProjectData';
 export default function ProjectPage() {
   const params = useParams();
   const projectId = parseInt(params.id as string);
-  const { project, loading, updateProjectInvestment, refreshProject } = useProjectData(projectId);
+  const { project, loading, updateProjectInvestment, refreshProject, resetFunding } = useProjectData(projectId);
   const [isInvestModalOpen, setIsInvestModalOpen] = useState(false);
+  const [isResettingFunding, setIsResettingFunding] = useState(false);
 
   // Loading state - shows spinner while fetching data
   if (loading) {
@@ -57,6 +58,18 @@ export default function ProjectPage() {
   const formattedReleasedFunds = Number.isNaN(releasedFunds)
     ? '0.00'
     : releasedFunds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const handleResetFunding = () => {
+    const confirmReset = window.confirm('Reset fundraising totals for this project?');
+    if (!confirmReset) return;
+    setIsResettingFunding(true);
+    try {
+      resetFunding();
+      refreshProject();
+    } finally {
+      setIsResettingFunding(false);
+    }
+  };
 
   // Main page content - only shows when data is loaded
   return (
@@ -135,7 +148,7 @@ export default function ProjectPage() {
                 <span>{progressPercentage.toFixed(1)}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
-                <div 
+                <div
                   className="bg-green-600 h-3 rounded-full transition-all duration-500"
                   style={{ width: `${progressPercentage}%` }}
                 ></div>
@@ -143,6 +156,15 @@ export default function ProjectPage() {
               <div className="flex justify-between text-sm text-gray-600 mt-2">
                 <span>Raised: ${parseFloat(project.raisedAmount).toLocaleString()}</span>
                 <span>Target: ${parseFloat(project.targetAmount).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={handleResetFunding}
+                  className="text-sm text-red-600 hover:text-red-700 font-medium border border-red-200 hover:border-red-300 px-3 py-1 rounded-lg transition-colors"
+                  disabled={isResettingFunding}
+                >
+                  {isResettingFunding ? 'Resetting...' : 'Reset Fundraising'}
+                </button>
               </div>
             </div>
 
