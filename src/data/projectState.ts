@@ -113,22 +113,32 @@ const buildInitialDictionary = (): ProjectDictionary => {
   }, {} as ProjectDictionary);
 };
 
+let inMemoryProjects: ProjectDictionary | null = null;
+
+const getOrCreateInMemoryProjects = (): ProjectDictionary => {
+  if (!inMemoryProjects) {
+    inMemoryProjects = buildInitialDictionary();
+  }
+  return inMemoryProjects;
+};
+
 // Load projects from localStorage or use initial data
 export const loadProjects = (): ProjectDictionary => {
-  const baseProjects = buildInitialDictionary();
-
   if (typeof window === 'undefined') {
-    return baseProjects;
+    return getOrCreateInMemoryProjects();
   }
+
+  const baseProjects = buildInitialDictionary();
 
   const saved = localStorage.getItem('retrofit-projects');
   if (!saved) {
+    inMemoryProjects = baseProjects;
     return baseProjects;
   }
 
   try {
     const parsed = JSON.parse(saved) as ProjectDictionary;
-    return Object.keys({ ...baseProjects, ...parsed }).reduce<ProjectDictionary>((acc, key) => {
+    const mergedProjects = Object.keys({ ...baseProjects, ...parsed }).reduce<ProjectDictionary>((acc, key) => {
       const numericKey = Number(key);
       const merged = mergeProject(baseProjects[numericKey], parsed[numericKey]);
       if (merged) {
@@ -136,8 +146,11 @@ export const loadProjects = (): ProjectDictionary => {
       }
       return acc;
     }, {} as ProjectDictionary);
+    inMemoryProjects = mergedProjects;
+    return mergedProjects;
   } catch (error) {
     console.error('Failed to parse stored retrofit projects', error);
+    inMemoryProjects = baseProjects;
     return baseProjects;
   }
 };
@@ -146,7 +159,11 @@ export const loadProjects = (): ProjectDictionary => {
 export const saveProjects = (projects: ProjectDictionary) => {
   if (typeof window !== 'undefined') {
     localStorage.setItem('retrofit-projects', JSON.stringify(projects));
+    inMemoryProjects = projects;
+    return;
   }
+
+  inMemoryProjects = projects;
 };
 
 const createTransactionId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
