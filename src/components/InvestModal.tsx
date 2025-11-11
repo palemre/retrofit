@@ -9,7 +9,7 @@ interface InvestModalProps {
   isOpen: boolean;
   onClose: () => void;
   project: Project;
-  onInvestSuccess?: (investmentAmount: string) => void;
+  onInvestSuccess?: (investmentAmount: string, investorAddress: string) => void;
 }
 
 export default function InvestModal({ isOpen, onClose, project, onInvestSuccess }: InvestModalProps) {
@@ -56,7 +56,7 @@ export default function InvestModal({ isOpen, onClose, project, onInvestSuccess 
       
       // Call the success callback if it exists
       if (onInvestSuccess) {
-        onInvestSuccess(investmentAmount);
+        onInvestSuccess(investmentAmount, currentAccount);
       }
       
       onClose();

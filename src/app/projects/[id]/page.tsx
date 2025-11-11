@@ -2,7 +2,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import WalletConnect from '@/components/WalletConnect';
 import InvestModal from '@/components/InvestModal';
 import MilestoneCard from '@/components/MilestoneCard';
@@ -12,8 +12,29 @@ import { useProjectData } from '@/hooks/useProjectData';
 export default function ProjectPage() {
   const params = useParams();
   const projectId = parseInt(params.id as string);
-  const { project, loading, updateProjectInvestment, refreshProject } = useProjectData(projectId);
+  const { project, loading, updateProjectInvestment, refreshProject, resetProjectFunding } = useProjectData(projectId);
   const [isInvestModalOpen, setIsInvestModalOpen] = useState(false);
+  const [isResettingFunding, setIsResettingFunding] = useState(false);
+
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return '—';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const formatAddress = (addr: string) => {
+    if (!addr) return '—';
+    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  };
 
   // Loading state - shows spinner while fetching data
   if (loading) {
@@ -45,14 +66,31 @@ export default function ProjectPage() {
   }
 
   // Handle successful investment - update the project data
-  const handleInvestSuccess = (investmentAmount: string) => {
+  const handleInvestSuccess = (investmentAmount: string, investorAddress: string) => {
     if (updateProjectInvestment) {
-      updateProjectInvestment(investmentAmount);
+      updateProjectInvestment(investmentAmount, investorAddress);
+    }
+  };
+
+  const handleResetFunding = () => {
+    setIsResettingFunding(true);
+    try {
+      resetProjectFunding();
+      refreshProject();
+    } finally {
+      setIsResettingFunding(false);
     }
   };
 
   // Calculate progress percentage
   const progressPercentage = Math.min((parseFloat(project.raisedAmount) / parseFloat(project.targetAmount)) * 100, 100);
+  const releasedFunds = parseFloat(project.projectWalletBalance || '0');
+  const formattedReleasedFunds = Number.isNaN(releasedFunds)
+    ? '0.00'
+    : releasedFunds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const investmentHistory = useMemo(() => project?.investmentHistory ?? [], [project?.investmentHistory]);
+  const releaseHistory = useMemo(() => project?.milestoneReleaseHistory ?? [], [project?.milestoneReleaseHistory]);
 
   // Main page content - only shows when data is loaded
   return (
@@ -142,6 +180,24 @@ export default function ProjectPage() {
               </div>
             </div>
 
+            <div className="mb-8 p-4 bg-red-50 border border-red-100 rounded-lg">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-red-700 uppercase tracking-wide">Testing Control</h3>
+                  <p className="text-sm text-red-600 mt-1">
+                    Reset this project&rsquo;s fundraising metrics to zero to simulate fresh investment cycles.
+                  </p>
+                </div>
+                <button
+                  onClick={handleResetFunding}
+                  disabled={isResettingFunding}
+                  className="self-start md:self-auto bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:bg-red-300"
+                >
+                  {isResettingFunding ? 'Resetting...' : 'Reset Fundraising'}
+                </button>
+              </div>
+            </div>
+
             {/* Invest Button */}
             <button 
               onClick={() => setIsInvestModalOpen(true)}
@@ -150,6 +206,87 @@ export default function ProjectPage() {
             >
               {project.status === 'Funding' ? 'Invest in This Project' : 'Funding Complete'}
             </button>
+          </div>
+        </div>
+
+        {/* On-Chain Asset Overview */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">On-Chain Asset Overview</h2>
+          <p className="text-gray-600 mb-6">
+            This retrofit initiative is issued as its own ERC-1155 asset. The project token is
+            administered by the dedicated treasury wallet below, and milestone payouts are streamed
+            into that wallet once work is verified.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div className="text-sm text-gray-500 mb-1">Token Standard</div>
+              <div className="text-lg font-semibold text-gray-900">ERC-1155</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-1">Token ID</div>
+              <div className="text-lg font-semibold text-gray-900">{project.erc1155TokenId}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-1">Contract Address</div>
+              <code className="block text-sm md:text-base text-green-700 bg-green-50 px-3 py-2 rounded-lg break-words">
+                {project.erc1155ContractAddress}
+              </code>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-1">Project Treasury Wallet</div>
+              <code className="block text-sm md:text-base text-blue-700 bg-blue-50 px-3 py-2 rounded-lg break-words">
+                {project.projectWalletAddress}
+              </code>
+            </div>
+            <div className="md:col-span-2">
+              <div className="text-sm text-gray-500 mb-1">Released Funds Currently Held</div>
+              <div className="text-lg font-semibold text-gray-900">
+                ${formattedReleasedFunds}
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Funds remain at zero until milestones are marked complete and verified, at which point the
+                corresponding tranche is deposited to the treasury wallet.
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                The ERC-1155 token is held by the treasury wallet, representing on-chain ownership of this
+                retrofit project.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Investment Transaction History</h3>
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Investor Wallet</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount (ETH)</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {investmentHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500">
+                        No investments have been recorded yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    investmentHistory
+                      .slice()
+                      .reverse()
+                      .map((entry) => (
+                        <tr key={entry.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(entry.timestamp)}</td>
+                          <td className="px-4 py-3 text-sm font-mono text-gray-700">{formatAddress(entry.investorAddress)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">{parseFloat(entry.amount).toFixed(2)}</td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -176,6 +313,41 @@ export default function ProjectPage() {
                 No milestones defined for this project yet.
               </div>
             )}
+          </div>
+
+          <div className="mt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Milestone Release History</h3>
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Milestone</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Released (ETH)</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {releaseHistory.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="px-4 py-6 text-center text-sm text-gray-500">
+                        No milestone disbursements have been recorded yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    releaseHistory
+                      .slice()
+                      .reverse()
+                      .map((entry) => (
+                        <tr key={entry.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(entry.timestamp)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{entry.milestoneName}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">{parseFloat(entry.amount).toFixed(2)}</td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
