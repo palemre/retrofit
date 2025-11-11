@@ -1,79 +1,55 @@
 // src/data/projectState.ts
 
-export interface Milestone {
-  id: number;
-  name: string;
-  description: string;
-  amount: string;
-  completed: boolean;
-  verified: boolean;
-  completedAt?: string | null;
-  verifiedAt?: string | null;
-  proofHash: string;
-  documents: string[];
-}
-
-export interface InvestmentTransaction {
-  id: string;
-  amount: string;
-  investorAddress: string;
-  timestamp: string;
-}
-
-export interface MilestoneReleaseTransaction {
-  id: string;
-  milestoneId: number;
-  milestoneName: string;
-  amount: string;
-  timestamp: string;
-}
-
-export interface ImpactMetrics {
-  annualCO2Reduction: number; // tons of CO₂ avoided annually
-  energySavings: number; // percentage improvement in efficiency
-  jobsCreated: number; // number of local jobs supported
-  leedCertification: string;
-}
-
-export interface Project {
-  id: number;
-  name: string;
-  description: string;
-  targetAmount: string;
-  raisedAmount: string;
-  expectedReturn: string;
-  duration: string;
-  status: string;
-  investorCount: string;
-  address: string;
-  image: string;
-  erc1155ContractAddress: string;
-  erc1155TokenId: string;
-  projectWalletAddress: string;
-  projectWalletBalance: string;
-  milestones: Milestone[];
-  impactMetrics: ImpactMetrics;
-  investmentHistory?: InvestmentTransaction[];
-  milestoneReleaseHistory?: MilestoneReleaseTransaction[];
-}
+import { getInitialProjects } from './mockProjects';
+import {
+  InvestmentTransaction,
+  Milestone,
+  MilestoneReleaseTransaction,
+  Project,
+} from './projectTypes';
 
 type ProjectDictionary = Record<number, Project>;
+
+const cloneMilestone = (milestone: Milestone): Milestone => ({
+  ...milestone,
+  documents: [...milestone.documents],
+});
+
+const cloneInvestmentTransaction = (
+  transaction: InvestmentTransaction
+): InvestmentTransaction => ({
+  ...transaction,
+});
+
+const cloneMilestoneReleaseTransaction = (
+  transaction: MilestoneReleaseTransaction
+): MilestoneReleaseTransaction => ({
+  ...transaction,
+});
+
+const cloneProject = (project: Project): Project => ({
+  ...project,
+  projectWalletBalance: project.projectWalletBalance ?? '0',
+  milestones: (project.milestones ?? []).map(cloneMilestone),
+  investmentHistory: (project.investmentHistory ?? []).map(cloneInvestmentTransaction),
+  milestoneReleaseHistory: (project.milestoneReleaseHistory ?? []).map(
+    cloneMilestoneReleaseTransaction
+  ),
+});
 
 const mergeMilestones = (
   initialMilestones: Milestone[] | undefined,
   savedMilestones: Milestone[] | undefined
 ): Milestone[] => {
-  const initialById = new Map((initialMilestones || []).map((milestone) => [milestone.id, milestone]));
+  const initialById = new Map((initialMilestones ?? []).map((milestone) => [milestone.id, milestone]));
   const source = savedMilestones ?? initialMilestones ?? [];
 
   return source.map((milestone) => {
-    const base = initialById.get(milestone.id) || milestone;
-    const merged = {
-      ...base,
+    const base = initialById.get(milestone.id);
+    const merged = cloneMilestone({
+      ...(base ? cloneMilestone(base) : milestone),
       ...milestone,
-      completedAt: milestone.completedAt ?? base.completedAt ?? null,
-      verifiedAt: milestone.verifiedAt ?? base.verifiedAt ?? null,
-    } as Milestone;
+    });
 
     if (!merged.completed) {
       merged.completedAt = null;
@@ -86,191 +62,84 @@ const mergeMilestones = (
   });
 };
 
-// Initial projects data WITH MILESTONES AND IMPACT METRICS
-const initialProjects: ProjectDictionary = {
-  1: {
-    id: 1,
-    name: "Downtown Office Retrofit",
-    description: "Solar panel installation and window upgrades for commercial building",
-    targetAmount: "50",
-    raisedAmount: "0.01",
-    expectedReturn: "8.5%",
-    duration: "24 months",
-    status: "Funding",
-    investorCount: "1",
-    address: "123 Main St, New York, NY",
-    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=250&fit=crop",
-    erc1155ContractAddress: "0x8A4e4A6E2C7cF0d3A9B1d263F4e5F61b7aFf1E21",
-    erc1155TokenId: "1",
-    projectWalletAddress: "0x3F5b2c1a9D7E8f6C5b4A1234567890dEfA123456",
-    projectWalletBalance: "0",
-    investmentHistory: [],
-    milestoneReleaseHistory: [],
-    milestones: [
-      {
-        id: 1,
-        name: "Solar Panel Installation",
-        description: "Install 100kW solar array on rooftop",
-        amount: "25",
-        completed: false,
-        verified: false,
-        completedAt: null,
-        verifiedAt: null,
-        proofHash: "",
-        documents: []
-      },
-      {
-        id: 2,
-        name: "Window Upgrades",
-        description: "Replace windows with double-paned energy-efficient glass",
-        amount: "15",
-        completed: false,
-        verified: false,
-        completedAt: null,
-        verifiedAt: null,
-        proofHash: "",
-        documents: []
-      }
-    ],
-    impactMetrics: {
-      annualCO2Reduction: 128,
-      energySavings: 32,
-      jobsCreated: 18,
-      leedCertification: "LEED Gold"
-    }
-  },
-  2: {
-    id: 2,
-    name: "Apartment Complex Green Upgrade",
-    description: "HVAC system replacement and insulation for residential building",
-    targetAmount: "75",
-    raisedAmount: "0",
-    expectedReturn: "7.2%",
-    duration: "18 months",
-    status: "Funding",
-    investorCount: "0",
-    address: "456 Oak Ave, Chicago, IL",
-    image: "https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=400&h=250&fit=crop",
-    erc1155ContractAddress: "0x4B6c7D8E9F0a1b2C3d4E5f60718293aB4c5D6e7F",
-    erc1155TokenId: "2",
-    projectWalletAddress: "0x7C8d9e0F1A2b3c4D5e6F7890aBCdEf1234567890",
-    projectWalletBalance: "0",
-    investmentHistory: [],
-    milestoneReleaseHistory: [],
-    milestones: [
-      {
-        id: 1,
-        name: "HVAC Replacement",
-        description: "Install high-efficiency heating and cooling systems",
-        amount: "45",
-        completed: false,
-        verified: false,
-        completedAt: null,
-        verifiedAt: null,
-        proofHash: "",
-        documents: []
-      },
-      {
-        id: 2,
-        name: "Building Insulation",
-        description: "Add spray foam insulation to attics and walls",
-        amount: "30",
-        completed: false,
-        verified: false,
-        completedAt: null,
-        verifiedAt: null,
-        proofHash: "",
-        documents: []
-      }
-    ],
-    impactMetrics: {
-      annualCO2Reduction: 94,
-      energySavings: 27,
-      jobsCreated: 22,
-      leedCertification: "LEED Silver"
-    }
-  },
-  3: {
-    id: 3,
-    name: "Historic Building Modernization",
-    description: "Energy efficiency upgrades while preserving historic character",
-    targetAmount: "100",
-    raisedAmount: "0",
-    expectedReturn: "9.2%",
-    duration: "30 months",
-    status: "Funding",
-    investorCount: "0",
-    address: "789 Heritage Lane, Boston, MA",
-    image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=250&fit=crop",
-    erc1155ContractAddress: "0x9d0E1F2a3B4c5D6e7F8091a2b3C4d5E6f7A8B9c0",
-    erc1155TokenId: "3",
-    projectWalletAddress: "0x12a3b4C5d6E7f8A9b0C1D2e3F4567890AbCdEf12",
-    projectWalletBalance: "0",
-    investmentHistory: [],
-    milestoneReleaseHistory: [],
-    milestones: [],
-    impactMetrics: {
-      annualCO2Reduction: 142,
-      energySavings: 35,
-      jobsCreated: 15,
-      leedCertification: "LEED Platinum Pending"
-    }
+const mergeProject = (initial?: Project, persisted?: Project): Project | null => {
+  if (!initial && !persisted) {
+    return null;
   }
+
+  const base = initial ? cloneProject(initial) : persisted ? cloneProject(persisted) : null;
+  if (!base) {
+    return null;
+  }
+
+  if (!persisted) {
+    base.projectWalletBalance = base.projectWalletBalance ?? '0';
+    base.milestones = mergeMilestones(initial?.milestones, initial?.milestones);
+    base.investmentHistory = (initial?.investmentHistory ?? []).map(cloneInvestmentTransaction);
+    base.milestoneReleaseHistory = (initial?.milestoneReleaseHistory ?? []).map(
+      cloneMilestoneReleaseTransaction
+    );
+    return base;
+  }
+
+  const merged: Project = {
+    ...base,
+    ...cloneProject(persisted),
+    milestones: mergeMilestones(initial?.milestones, persisted.milestones),
+    impactMetrics: persisted.impactMetrics ?? initial?.impactMetrics ?? base.impactMetrics,
+    projectWalletBalance:
+      persisted.projectWalletBalance ?? initial?.projectWalletBalance ?? base.projectWalletBalance ?? '0',
+    investmentHistory: (persisted.investmentHistory ?? initial?.investmentHistory ?? []).map(
+      cloneInvestmentTransaction
+    ),
+    milestoneReleaseHistory: (
+      persisted.milestoneReleaseHistory ?? initial?.milestoneReleaseHistory ?? []
+    ).map(cloneMilestoneReleaseTransaction),
+  };
+
+  if (!merged.projectWalletBalance) {
+    merged.projectWalletBalance = '0';
+  }
+
+  return merged;
+};
+
+const buildInitialDictionary = (): ProjectDictionary => {
+  const initial = getInitialProjects();
+  return Object.keys(initial).reduce<ProjectDictionary>((acc, key) => {
+    const numericKey = Number(key);
+    acc[numericKey] = cloneProject(initial[numericKey]);
+    return acc;
+  }, {} as ProjectDictionary);
 };
 
 // Load projects from localStorage or use initial data
 export const loadProjects = (): ProjectDictionary => {
-  if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('retrofit-projects');
-    if (saved) {
-      const parsed = JSON.parse(saved) as ProjectDictionary;
-      // Merge saved data with any new fields from the initial definition
-      const mergedEntries = Object.keys({ ...initialProjects, ...parsed }).reduce<ProjectDictionary>((acc, key) => {
-        const numericKey = Number(key);
-        const initialProject = initialProjects[numericKey];
-        const savedProject = parsed[numericKey];
-        if (initialProject && savedProject) {
-          acc[numericKey] = {
-            ...initialProject,
-            ...savedProject,
-            milestones: mergeMilestones(initialProject.milestones, savedProject.milestones),
-            impactMetrics: savedProject.impactMetrics || initialProject.impactMetrics,
-          };
-          if (!acc[numericKey].projectWalletBalance) {
-            acc[numericKey].projectWalletBalance = '0';
-          }
-          if (!acc[numericKey].milestones) {
-            acc[numericKey].milestones = mergeMilestones(initialProject.milestones, initialProject.milestones);
-          }
-          if (!acc[numericKey].investmentHistory) {
-            acc[numericKey].investmentHistory = [];
-          }
-          if (!acc[numericKey].milestoneReleaseHistory) {
-            acc[numericKey].milestoneReleaseHistory = [];
-          }
-        } else {
-          const fallbackProject = savedProject || initialProject;
-          if (fallbackProject) {
-            acc[numericKey] = {
-              ...fallbackProject,
-              projectWalletBalance: fallbackProject.projectWalletBalance || '0',
-            };
-            acc[numericKey].milestones = mergeMilestones(initialProject?.milestones, fallbackProject.milestones);
-            if (!acc[numericKey].investmentHistory) {
-              acc[numericKey].investmentHistory = [];
-            }
-            if (!acc[numericKey].milestoneReleaseHistory) {
-              acc[numericKey].milestoneReleaseHistory = [];
-            }
-          }
-        }
-        return acc;
-      }, {} as ProjectDictionary);
+  const baseProjects = buildInitialDictionary();
 
-      return mergedEntries;
-    }
+  if (typeof window === 'undefined') {
+    return baseProjects;
   }
-  return initialProjects;
+
+  const saved = localStorage.getItem('retrofit-projects');
+  if (!saved) {
+    return baseProjects;
+  }
+
+  try {
+    const parsed = JSON.parse(saved) as ProjectDictionary;
+    return Object.keys({ ...baseProjects, ...parsed }).reduce<ProjectDictionary>((acc, key) => {
+      const numericKey = Number(key);
+      const merged = mergeProject(baseProjects[numericKey], parsed[numericKey]);
+      if (merged) {
+        acc[numericKey] = merged;
+      }
+      return acc;
+    }, {} as ProjectDictionary);
+  } catch (error) {
+    console.error('Failed to parse stored retrofit projects', error);
+    return baseProjects;
+  }
 };
 
 // Save projects to localStorage
@@ -280,6 +149,8 @@ export const saveProjects = (projects: ProjectDictionary) => {
   }
 };
 
+const createTransactionId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
 // Update project investment
 export const updateProjectInvestment = (
   projectId: number,
@@ -287,29 +158,29 @@ export const updateProjectInvestment = (
   investorAddress?: string
 ): Project | null => {
   const projects = loadProjects();
-  if (projects[projectId]) {
-    const currentRaised = parseFloat(projects[projectId].raisedAmount);
-    const newInvestment = parseFloat(investmentAmount);
-    projects[projectId].raisedAmount = (currentRaised + newInvestment).toFixed(2);
-
-    const currentInvestors = parseInt(projects[projectId].investorCount);
-    projects[projectId].investorCount = (currentInvestors + 1).toString();
-
-    const transaction: InvestmentTransaction = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      amount: investmentAmount,
-      investorAddress: investorAddress || '0x0000000000000000000000000000000000000000',
-      timestamp: new Date().toISOString(),
-    };
-    if (!projects[projectId].investmentHistory) {
-      projects[projectId].investmentHistory = [];
-    }
-    projects[projectId].investmentHistory = [...projects[projectId].investmentHistory, transaction];
-
-    saveProjects(projects);
-    return { ...projects[projectId] };
+  const project = projects[projectId];
+  if (!project) {
+    return null;
   }
-  return null;
+
+  const currentRaised = parseFloat(project.raisedAmount);
+  const newInvestment = parseFloat(investmentAmount);
+  project.raisedAmount = (currentRaised + newInvestment).toFixed(2);
+
+  const currentInvestors = parseInt(project.investorCount);
+  project.investorCount = (currentInvestors + 1).toString();
+
+  const transaction: InvestmentTransaction = {
+    id: createTransactionId(),
+    amount: investmentAmount,
+    investorAddress: investorAddress || '0x0000000000000000000000000000000000000000',
+    timestamp: new Date().toISOString(),
+  };
+
+  project.investmentHistory = [...(project.investmentHistory ?? []), transaction];
+
+  saveProjects(projects);
+  return cloneProject(project);
 };
 
 // Update milestone status
@@ -319,61 +190,60 @@ export const updateMilestone = (
   updates: Partial<Milestone>
 ) => {
   const projects = loadProjects();
-  if (projects[projectId]) {
-    const project = projects[projectId];
-    if (!project.milestones) project.milestones = [];
-
-    const milestone = project.milestones.find((m: Milestone) => m.id === milestoneId);
-    if (milestone) {
-      const wasCompleted = milestone.completed;
-      const wasVerified = milestone.verified;
-
-      Object.assign(milestone, updates);
-
-      if (!wasCompleted && milestone.completed) {
-        milestone.completedAt = new Date().toISOString();
-      } else if (wasCompleted && !milestone.completed) {
-        milestone.completedAt = null;
-      }
-
-      const currentBalance = parseFloat(project.projectWalletBalance || '0');
-      const milestoneAmount = parseFloat(milestone.amount || '0');
-      const normalizedAmount = Number.isNaN(milestoneAmount) ? 0 : milestoneAmount;
-
-      if (!wasVerified && milestone.verified) {
-        project.projectWalletBalance = (currentBalance + normalizedAmount).toFixed(2);
-        milestone.verifiedAt = new Date().toISOString();
-        if (!project.milestoneReleaseHistory) {
-          project.milestoneReleaseHistory = [];
-        }
-        project.milestoneReleaseHistory = [
-          ...project.milestoneReleaseHistory,
-          {
-            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            milestoneId: milestone.id,
-            milestoneName: milestone.name,
-            amount: milestone.amount,
-            timestamp: milestone.verifiedAt,
-          },
-        ];
-      } else if (wasVerified && !milestone.verified) {
-        const updatedBalance = Math.max(currentBalance - normalizedAmount, 0);
-        project.projectWalletBalance = updatedBalance.toFixed(2);
-        milestone.verifiedAt = null;
-      }
-
-      if (!milestone.completed) {
-        milestone.completedAt = null;
-      }
-      if (!milestone.verified) {
-        milestone.verifiedAt = null;
-      }
-
-      saveProjects(projects);
-      return milestone;
-    }
+  const project = projects[projectId];
+  if (!project) {
+    return null;
   }
-  return null;
+
+  const milestone = project.milestones.find((m: Milestone) => m.id === milestoneId);
+  if (!milestone) {
+    return null;
+  }
+
+  const wasCompleted = milestone.completed;
+  const wasVerified = milestone.verified;
+
+  Object.assign(milestone, updates);
+
+  if (!wasCompleted && milestone.completed) {
+    milestone.completedAt = new Date().toISOString();
+  } else if (wasCompleted && !milestone.completed) {
+    milestone.completedAt = null;
+  }
+
+  const currentBalance = parseFloat(project.projectWalletBalance || '0');
+  const milestoneAmount = parseFloat(milestone.amount || '0');
+  const normalizedAmount = Number.isNaN(milestoneAmount) ? 0 : milestoneAmount;
+
+  if (!wasVerified && milestone.verified) {
+    project.projectWalletBalance = (currentBalance + normalizedAmount).toFixed(2);
+    milestone.verifiedAt = new Date().toISOString();
+    const releaseTransaction: MilestoneReleaseTransaction = {
+      id: createTransactionId(),
+      milestoneId: milestone.id,
+      milestoneName: milestone.name,
+      amount: milestone.amount,
+      timestamp: milestone.verifiedAt,
+    };
+    project.milestoneReleaseHistory = [
+      ...(project.milestoneReleaseHistory ?? []),
+      releaseTransaction,
+    ];
+  } else if (wasVerified && !milestone.verified) {
+    const updatedBalance = Math.max(currentBalance - normalizedAmount, 0);
+    project.projectWalletBalance = updatedBalance.toFixed(2);
+    milestone.verifiedAt = null;
+  }
+
+  if (!milestone.completed) {
+    milestone.completedAt = null;
+  }
+  if (!milestone.verified) {
+    milestone.verifiedAt = null;
+  }
+
+  saveProjects(projects);
+  return cloneMilestone(milestone);
 };
 
 export const resetMilestone = (projectId: number, milestoneId: number) => {
@@ -387,25 +257,28 @@ export const resetMilestone = (projectId: number, milestoneId: number) => {
 
 export const resetProjectFundraising = (projectId: number): Project | null => {
   const projects = loadProjects();
-  if (projects[projectId]) {
-    const project = projects[projectId];
-    project.raisedAmount = '0';
-    project.investorCount = '0';
-    project.investmentHistory = [];
-    saveProjects(projects);
-    return project;
+  const project = projects[projectId];
+  if (!project) {
+    return null;
   }
-  return null;
+
+  project.raisedAmount = '0';
+  project.investorCount = '0';
+  project.investmentHistory = [];
+
+  saveProjects(projects);
+  return cloneProject(project);
 };
 
 // Get all projects as array
 export const getAllProjects = (): Project[] => {
   const projects = loadProjects();
-  return Object.values(projects);
+  return Object.values(projects).map(cloneProject);
 };
 
 // Get single project
 export const getProject = (projectId: number): Project | null => {
   const projects = loadProjects();
-  return projects[projectId] || null;
+  const project = projects[projectId];
+  return project ? cloneProject(project) : null;
 };

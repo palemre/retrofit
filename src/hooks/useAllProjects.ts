@@ -1,6 +1,7 @@
 // src/hooks/useAllProjects.ts
 import { useState, useEffect } from 'react';
-import { getAllProjects, Project } from '@/data/projectState';
+import { getAllProjects } from '@/data/projectState';
+import { Project } from '@/data/projectTypes';
 
 export function useAllProjects() {
   const [projects, setProjects] = useState<Project[]>([]);

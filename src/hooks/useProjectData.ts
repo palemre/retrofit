@@ -4,8 +4,8 @@ import {
   getProject,
   updateProjectInvestment as updateGlobalInvestment,
   resetProjectFundraising as resetGlobalProjectFundraising,
-  Project,
 } from '@/data/projectState';
+import { Project } from '@/data/projectTypes';
 
 export function useProjectData(projectId: number) {
   const [project, setProject] = useState<Project | null>(null);

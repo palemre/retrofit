@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { ethers } from 'ethers';
-import { Project } from '@/data/projectState';
+import { Project } from '@/data/projectTypes';
 
 interface InvestModalProps {
   isOpen: boolean;

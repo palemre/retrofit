@@ -1,7 +1,7 @@
 // src/components/ImpactMetrics.tsx
 'use client';
 
-import { ImpactMetrics as ImpactMetricsType } from '@/data/projectState';
+import { ImpactMetrics as ImpactMetricsType } from '@/data/projectTypes';
 
 interface ImpactMetricsProps {
   metrics: ImpactMetricsType;

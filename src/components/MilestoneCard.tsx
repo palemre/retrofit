@@ -2,7 +2,8 @@
 'use client';
 
 import { useState } from 'react';
-import { updateMilestone, resetMilestone as resetMilestoneState, Milestone } from '@/data/projectState';
+import { updateMilestone, resetMilestone as resetMilestoneState } from '@/data/projectState';
+import { Milestone } from '@/data/projectTypes';
 
 const formatTimestamp = (value?: string | null) => {
   if (!value) return '';
