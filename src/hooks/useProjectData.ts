@@ -1,9 +1,13 @@
 // src/hooks/useProjectData.ts
 import { useState, useEffect } from 'react';
-import { getProject, updateProjectInvestment as updateGlobalInvestment } from '@/data/projectState';
+import {
+  getProject,
+  updateProjectInvestment as updateGlobalInvestment,
+  Project,
+} from '@/data/projectState';
 
 export function useProjectData(projectId: number) {
-  const [project, setProject] = useState<any>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
