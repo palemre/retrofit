@@ -13,6 +13,21 @@ export interface Milestone {
   documents: string[];
 }
 
+export interface InvestmentTransaction {
+  id: string;
+  amount: string;
+  date: string;
+  investorWallet: string;
+}
+
+export interface MilestonePayoutTransaction {
+  id: string;
+  milestoneId: number;
+  milestoneName: string;
+  amount: string;
+  date: string;
+}
+
 export interface ImpactMetrics {
   annualCO2Reduction: number; // tons of CO₂ avoided annually
   energySavings: number; // percentage improvement in efficiency
@@ -38,6 +53,8 @@ export interface Project {
   projectWalletBalance: string;
   milestones: Milestone[];
   impactMetrics: ImpactMetrics;
+  investmentHistory: InvestmentTransaction[];
+  milestonePayoutHistory: MilestonePayoutTransaction[];
 }
 
 type ProjectDictionary = Record<number, Project>;
@@ -50,6 +67,14 @@ const normalizeMilestones = (milestones: Milestone[] = []): Milestone[] =>
     completedAt: milestone.completedAt ?? null,
     verifiedAt: milestone.verifiedAt ?? null,
   }));
+
+const withProjectDefaults = (project: Project): Project => ({
+  ...project,
+  projectWalletBalance: project.projectWalletBalance || '0',
+  milestones: normalizeMilestones(project.milestones || []),
+  investmentHistory: project.investmentHistory || [],
+  milestonePayoutHistory: project.milestonePayoutHistory || [],
+});
 
 // Initial projects data WITH MILESTONES AND IMPACT METRICS
 const initialProjects: ProjectDictionary = {
@@ -100,7 +125,9 @@ const initialProjects: ProjectDictionary = {
       energySavings: 32,
       jobsCreated: 18,
       leedCertification: "LEED Gold"
-    }
+    },
+    investmentHistory: [],
+    milestonePayoutHistory: []
   },
   2: {
     id: 2,
@@ -149,7 +176,9 @@ const initialProjects: ProjectDictionary = {
       energySavings: 27,
       jobsCreated: 22,
       leedCertification: "LEED Silver"
-    }
+    },
+    investmentHistory: [],
+    milestonePayoutHistory: []
   },
   3: {
     id: 3,
@@ -173,7 +202,9 @@ const initialProjects: ProjectDictionary = {
       energySavings: 35,
       jobsCreated: 15,
       leedCertification: "LEED Platinum Pending"
-    }
+    },
+    investmentHistory: [],
+    milestonePayoutHistory: []
   }
 };
 
@@ -189,23 +220,21 @@ export const loadProjects = (): ProjectDictionary => {
         const initialProject = initialProjects[numericKey];
         const savedProject = parsed[numericKey];
         if (initialProject && savedProject) {
-          acc[numericKey] = {
+          acc[numericKey] = withProjectDefaults({
             ...initialProject,
             ...savedProject,
             milestones: normalizeMilestones(savedProject.milestones || initialProject.milestones),
             impactMetrics: savedProject.impactMetrics || initialProject.impactMetrics,
-          };
-          if (!acc[numericKey].projectWalletBalance) {
-            acc[numericKey].projectWalletBalance = '0';
-          }
+            investmentHistory: savedProject.investmentHistory || initialProject.investmentHistory || [],
+            milestonePayoutHistory: savedProject.milestonePayoutHistory || initialProject.milestonePayoutHistory || [],
+          });
         } else {
           const fallbackProject = savedProject || initialProject;
           if (fallbackProject) {
-            acc[numericKey] = {
+            acc[numericKey] = withProjectDefaults({
               ...fallbackProject,
-              projectWalletBalance: fallbackProject.projectWalletBalance || '0',
               milestones: normalizeMilestones(fallbackProject.milestones),
-            };
+            });
           }
         }
         return acc;
@@ -214,7 +243,10 @@ export const loadProjects = (): ProjectDictionary => {
       return mergedEntries;
     }
   }
-  return initialProjects;
+  return Object.values(initialProjects).reduce<ProjectDictionary>((acc, project) => {
+    acc[project.id] = withProjectDefaults(project);
+    return acc;
+  }, {} as ProjectDictionary);
 };
 
 // Save projects to localStorage
@@ -227,7 +259,8 @@ export const saveProjects = (projects: ProjectDictionary) => {
 // Update project investment
 export const updateProjectInvestment = (
   projectId: number,
-  investmentAmount: string
+  investmentAmount: string,
+  investorWallet: string
 ): Project | null => {
   const projects = loadProjects();
   if (projects[projectId]) {
@@ -237,6 +270,18 @@ export const updateProjectInvestment = (
 
     const currentInvestors = parseInt(projects[projectId].investorCount);
     projects[projectId].investorCount = (currentInvestors + 1).toString();
+
+    const transaction: InvestmentTransaction = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      amount: investmentAmount,
+      date: new Date().toISOString(),
+      investorWallet,
+    };
+
+    projects[projectId].investmentHistory = [
+      ...(projects[projectId].investmentHistory || []),
+      transaction,
+    ];
 
     saveProjects(projects);
     return projects[projectId];
@@ -296,12 +341,31 @@ export const updateMilestone = (
         const milestoneAmount = parseFloat(milestone.amount || '0');
         const updatedBalance = currentBalance + (isNaN(milestoneAmount) ? 0 : milestoneAmount);
         project.projectWalletBalance = updatedBalance.toFixed(2);
+
+        const payout: MilestonePayoutTransaction = {
+          id: `${milestone.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          milestoneId: milestone.id,
+          milestoneName: milestone.name,
+          amount: milestone.amount,
+          date: milestone.verifiedAt || new Date().toISOString(),
+        };
+
+        project.milestonePayoutHistory = [
+          ...(project.milestonePayoutHistory || []),
+          payout,
+        ];
       } else if (wasVerified && !milestone.verified) {
         const currentBalance = parseFloat(project.projectWalletBalance || '0');
         const milestoneAmount = parseFloat(milestone.amount || '0');
         const deduction = isNaN(milestoneAmount) ? 0 : milestoneAmount;
         const updatedBalance = Math.max(0, currentBalance - deduction);
         project.projectWalletBalance = updatedBalance.toFixed(2);
+
+        if (project.milestonePayoutHistory) {
+          project.milestonePayoutHistory = project.milestonePayoutHistory.filter(
+            (entry) => entry.milestoneId !== milestone.id
+          );
+        }
       }
 
       saveProjects(projects);
