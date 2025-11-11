@@ -6,6 +6,7 @@ import { useState } from 'react';
 import WalletConnect from '@/components/WalletConnect';
 import InvestModal from '@/components/InvestModal';
 import MilestoneCard from '@/components/MilestoneCard';
+import ImpactMetrics from '@/components/ImpactMetrics';
 import { useProjectData } from '@/hooks/useProjectData';
 
 export default function ProjectPage() {
@@ -151,6 +152,11 @@ export default function ProjectPage() {
             </button>
           </div>
         </div>
+
+        {/* Impact Metrics */}
+        {project.impactMetrics && (
+          <ImpactMetrics metrics={project.impactMetrics} />
+        )}
 
         {/* Milestones Section */}
         <div className="bg-white rounded-xl shadow-lg p-8 mb-8">

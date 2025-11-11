@@ -1,7 +1,9 @@
 // src/data/mockProjects.ts
 
+import { Project } from './projectState';
+
 // Create a function to get/set projects so we can update them
-let projectsData = {
+let projectsData: Record<number, Project> = {
   1: {
     id: 1,
     name: "Downtown Office Retrofit",
@@ -9,7 +11,7 @@ let projectsData = {
     targetAmount: "50",
     raisedAmount: "0.01",
     expectedReturn: "8.5%",
-    duration: "24 months", 
+    duration: "24 months",
     status: "Funding",
     investorCount: "1",
     address: "123 Main St, New York, NY",
@@ -26,7 +28,7 @@ let projectsData = {
         documents: []
       },
       {
-        id: 2, 
+        id: 2,
         name: "Window Upgrades",
         description: "Replace windows with double-paned energy-efficient glass",
         amount: "15",
@@ -35,10 +37,16 @@ let projectsData = {
         proofHash: "",
         documents: []
       }
-    ]
+    ],
+    impactMetrics: {
+      annualCO2Reduction: 128,
+      energySavings: 32,
+      jobsCreated: 18,
+      leedCertification: "LEED Gold"
+    }
   },
   2: {
-    id: 2, 
+    id: 2,
     name: "Apartment Complex Green Upgrade",
     description: "HVAC system replacement and insulation for residential building",
     targetAmount: "75",
@@ -52,7 +60,7 @@ let projectsData = {
     milestones: [
       {
         id: 1,
-        name: "HVAC Replacement", 
+        name: "HVAC Replacement",
         description: "Install high-efficiency heating and cooling systems",
         amount: "45",
         completed: false,
@@ -63,28 +71,40 @@ let projectsData = {
       {
         id: 2,
         name: "Building Insulation",
-        description: "Add spray foam insulation to attics and walls", 
+        description: "Add spray foam insulation to attics and walls",
         amount: "30",
         completed: false,
         verified: false,
         proofHash: "",
         documents: []
       }
-    ]
+    ],
+    impactMetrics: {
+      annualCO2Reduction: 94,
+      energySavings: 27,
+      jobsCreated: 22,
+      leedCertification: "LEED Silver"
+    }
   },
   3: {
     id: 3,
-    name: "Historic Building Modernization", 
+    name: "Historic Building Modernization",
     description: "Energy efficiency upgrades while preserving historic character",
     targetAmount: "100",
     raisedAmount: "0",
     expectedReturn: "9.2%",
     duration: "30 months",
     status: "Funding",
-    investorCount: "0", 
+    investorCount: "0",
     address: "789 Heritage Lane, Boston, MA",
     image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=250&fit=crop",
-    milestones: []
+    milestones: [],
+    impactMetrics: {
+      annualCO2Reduction: 142,
+      energySavings: 35,
+      jobsCreated: 15,
+      leedCertification: "LEED Platinum Pending"
+    }
   }
 };
 

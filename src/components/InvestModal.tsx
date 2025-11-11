@@ -3,11 +3,12 @@
 
 import { useState } from 'react';
 import { ethers } from 'ethers';
+import { Project } from '@/data/projectState';
 
 interface InvestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  project: any;
+  project: Project;
   onInvestSuccess?: (investmentAmount: string) => void;
 }
 

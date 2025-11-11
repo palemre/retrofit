@@ -2,18 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { updateMilestone } from '@/data/projectState';
-
-interface Milestone {
-  id: number;
-  name: string;
-  description: string;
-  amount: string;
-  completed: boolean;
-  verified: boolean;
-  proofHash: string;
-  documents: string[];
-}
+import { updateMilestone, Milestone } from '@/data/projectState';
 
 interface MilestoneCardProps {
   milestone: Milestone;

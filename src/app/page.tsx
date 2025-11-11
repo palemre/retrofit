@@ -7,6 +7,21 @@ import { useAllProjects } from '@/hooks/useAllProjects';
 export default function Home() {
   const { projects, loading } = useAllProjects();
 
+  const totalFunded = projects.reduce((sum, p) => sum + parseFloat(p.raisedAmount), 0);
+  const totalInvestors = projects.reduce((sum, p) => sum + parseInt(p.investorCount), 0);
+  const totalCO2Reduction = projects.reduce(
+    (sum, p) => sum + (p.impactMetrics?.annualCO2Reduction ?? 0),
+    0
+  );
+  const averageEnergySavings =
+    projects.length > 0
+      ? projects.reduce((sum, p) => sum + (p.impactMetrics?.energySavings ?? 0), 0) / projects.length
+      : 0;
+  const totalGreenJobs = projects.reduce(
+    (sum, p) => sum + (p.impactMetrics?.jobsCreated ?? 0),
+    0
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
@@ -38,14 +53,14 @@ export default function Home() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6 text-center">
             <div className="text-2xl font-bold text-green-600">{projects.length}</div>
             <div className="text-gray-600">Active Projects</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6 text-center">
             <div className="text-2xl font-bold text-green-600">
-              ${projects.reduce((sum, p) => sum + parseFloat(p.raisedAmount), 0).toLocaleString()}
+              ${totalFunded.toLocaleString()}
             </div>
             <div className="text-gray-600">Total Funded</div>
           </div>
@@ -54,10 +69,25 @@ export default function Home() {
             <div className="text-gray-600">Avg. Return</div>
           </div>
           <div className="bg-white rounded-lg shadow p-6 text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {projects.reduce((sum, p) => sum + parseInt(p.investorCount), 0)}
-            </div>
+            <div className="text-2xl font-bold text-green-600">{totalInvestors}</div>
             <div className="text-gray-600">Active Investors</div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-white rounded-lg shadow p-6 text-center">
+            <div className="text-2xl font-bold text-green-600">
+              {totalCO2Reduction.toLocaleString()} tons
+            </div>
+            <div className="text-gray-600">Annual CO₂ Reduction</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6 text-center">
+            <div className="text-2xl font-bold text-green-600">{averageEnergySavings.toFixed(1)}%</div>
+            <div className="text-gray-600">Avg. Energy Savings</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6 text-center">
+            <div className="text-2xl font-bold text-green-600">{totalGreenJobs.toLocaleString()}</div>
+            <div className="text-gray-600">Green Jobs Supported</div>
           </div>
         </div>
 

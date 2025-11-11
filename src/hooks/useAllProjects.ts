@@ -1,9 +1,9 @@
 // src/hooks/useAllProjects.ts
 import { useState, useEffect } from 'react';
-import { getAllProjects, loadProjects } from '@/data/projectState';
+import { getAllProjects, Project } from '@/data/projectState';
 
 export function useAllProjects() {
-  const [projects, setProjects] = useState<any[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
