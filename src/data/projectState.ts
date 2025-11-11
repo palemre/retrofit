@@ -7,6 +7,8 @@ export interface Milestone {
   amount: string;
   completed: boolean;
   verified: boolean;
+  completedAt?: string | null;
+  verifiedAt?: string | null;
   proofHash: string;
   documents: string[];
 }
@@ -40,6 +42,15 @@ export interface Project {
 
 type ProjectDictionary = Record<number, Project>;
 
+const normalizeMilestones = (milestones: Milestone[] = []): Milestone[] =>
+  milestones.map((milestone) => ({
+    ...milestone,
+    proofHash: milestone.proofHash || '',
+    documents: milestone.documents || [],
+    completedAt: milestone.completedAt ?? null,
+    verifiedAt: milestone.verifiedAt ?? null,
+  }));
+
 // Initial projects data WITH MILESTONES AND IMPACT METRICS
 const initialProjects: ProjectDictionary = {
   1: {
@@ -58,7 +69,7 @@ const initialProjects: ProjectDictionary = {
     erc1155TokenId: "1",
     projectWalletAddress: "0x3F5b2c1a9D7E8f6C5b4A1234567890dEfA123456",
     projectWalletBalance: "0",
-    milestones: [
+    milestones: normalizeMilestones([
       {
         id: 1,
         name: "Solar Panel Installation",
@@ -66,6 +77,8 @@ const initialProjects: ProjectDictionary = {
         amount: "25",
         completed: false,
         verified: false,
+        completedAt: null,
+        verifiedAt: null,
         proofHash: "",
         documents: []
       },
@@ -76,10 +89,12 @@ const initialProjects: ProjectDictionary = {
         amount: "15",
         completed: false,
         verified: false,
+        completedAt: null,
+        verifiedAt: null,
         proofHash: "",
         documents: []
       }
-    ],
+    ]),
     impactMetrics: {
       annualCO2Reduction: 128,
       energySavings: 32,
@@ -103,7 +118,7 @@ const initialProjects: ProjectDictionary = {
     erc1155TokenId: "2",
     projectWalletAddress: "0x7C8d9e0F1A2b3c4D5e6F7890aBCdEf1234567890",
     projectWalletBalance: "0",
-    milestones: [
+    milestones: normalizeMilestones([
       {
         id: 1,
         name: "HVAC Replacement",
@@ -111,6 +126,8 @@ const initialProjects: ProjectDictionary = {
         amount: "45",
         completed: false,
         verified: false,
+        completedAt: null,
+        verifiedAt: null,
         proofHash: "",
         documents: []
       },
@@ -121,10 +138,12 @@ const initialProjects: ProjectDictionary = {
         amount: "30",
         completed: false,
         verified: false,
+        completedAt: null,
+        verifiedAt: null,
         proofHash: "",
         documents: []
       }
-    ],
+    ]),
     impactMetrics: {
       annualCO2Reduction: 94,
       energySavings: 27,
@@ -148,7 +167,7 @@ const initialProjects: ProjectDictionary = {
     erc1155TokenId: "3",
     projectWalletAddress: "0x12a3b4C5d6E7f8A9b0C1D2e3F4567890AbCdEf12",
     projectWalletBalance: "0",
-    milestones: [],
+    milestones: normalizeMilestones([]),
     impactMetrics: {
       annualCO2Reduction: 142,
       energySavings: 35,
@@ -173,7 +192,7 @@ export const loadProjects = (): ProjectDictionary => {
           acc[numericKey] = {
             ...initialProject,
             ...savedProject,
-            milestones: savedProject.milestones || initialProject.milestones,
+            milestones: normalizeMilestones(savedProject.milestones || initialProject.milestones),
             impactMetrics: savedProject.impactMetrics || initialProject.impactMetrics,
           };
           if (!acc[numericKey].projectWalletBalance) {
@@ -185,6 +204,7 @@ export const loadProjects = (): ProjectDictionary => {
             acc[numericKey] = {
               ...fallbackProject,
               projectWalletBalance: fallbackProject.projectWalletBalance || '0',
+              milestones: normalizeMilestones(fallbackProject.milestones),
             };
           }
         }
@@ -224,6 +244,17 @@ export const updateProjectInvestment = (
   return null;
 };
 
+export const resetProjectFunding = (projectId: number): Project | null => {
+  const projects = loadProjects();
+  if (projects[projectId]) {
+    projects[projectId].raisedAmount = '0.00';
+    projects[projectId].investorCount = '0';
+    saveProjects(projects);
+    return projects[projectId];
+  }
+  return null;
+};
+
 // Update milestone status
 export const updateMilestone = (
   projectId: number,
@@ -238,13 +269,38 @@ export const updateMilestone = (
     const milestone = project.milestones.find((m: Milestone) => m.id === milestoneId);
     if (milestone) {
       const wasVerified = milestone.verified;
+      const wasCompleted = milestone.completed;
 
-      Object.assign(milestone, updates);
+      const updatesWithTimestamps: Partial<Milestone> = { ...updates };
+
+      if (updates.completed !== undefined) {
+        if (updates.completed && !wasCompleted) {
+          updatesWithTimestamps.completedAt = new Date().toISOString();
+        } else if (!updates.completed && wasCompleted) {
+          updatesWithTimestamps.completedAt = null;
+        }
+      }
+
+      if (updates.verified !== undefined) {
+        if (updates.verified && !wasVerified) {
+          updatesWithTimestamps.verifiedAt = new Date().toISOString();
+        } else if (!updates.verified && wasVerified) {
+          updatesWithTimestamps.verifiedAt = null;
+        }
+      }
+
+      Object.assign(milestone, updatesWithTimestamps);
 
       if (!wasVerified && milestone.verified) {
         const currentBalance = parseFloat(project.projectWalletBalance || '0');
         const milestoneAmount = parseFloat(milestone.amount || '0');
         const updatedBalance = currentBalance + (isNaN(milestoneAmount) ? 0 : milestoneAmount);
+        project.projectWalletBalance = updatedBalance.toFixed(2);
+      } else if (wasVerified && !milestone.verified) {
+        const currentBalance = parseFloat(project.projectWalletBalance || '0');
+        const milestoneAmount = parseFloat(milestone.amount || '0');
+        const deduction = isNaN(milestoneAmount) ? 0 : milestoneAmount;
+        const updatedBalance = Math.max(0, currentBalance - deduction);
         project.projectWalletBalance = updatedBalance.toFixed(2);
       }
 

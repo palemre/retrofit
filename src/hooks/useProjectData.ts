@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import {
   getProject,
   updateProjectInvestment as updateGlobalInvestment,
+  resetProjectFunding as resetGlobalProjectFunding,
   Project,
 } from '@/data/projectState';
 
@@ -35,5 +36,12 @@ export function useProjectData(projectId: number) {
     setProject(foundProject || null);
   };
 
-  return { project, loading, updateProjectInvestment, refreshProject };
+  const resetFunding = () => {
+    const updatedProject = resetGlobalProjectFunding(projectId);
+    if (updatedProject) {
+      setProject(updatedProject);
+    }
+  };
+
+  return { project, loading, updateProjectInvestment, refreshProject, resetFunding };
 }

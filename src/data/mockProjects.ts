@@ -28,6 +28,8 @@ let projectsData: Record<number, Project> = {
         amount: "25",
         completed: false,
         verified: false,
+        completedAt: null,
+        verifiedAt: null,
         proofHash: "",
         documents: []
       },
@@ -38,6 +40,8 @@ let projectsData: Record<number, Project> = {
         amount: "15",
         completed: false,
         verified: false,
+        completedAt: null,
+        verifiedAt: null,
         proofHash: "",
         documents: []
       }
@@ -73,6 +77,8 @@ let projectsData: Record<number, Project> = {
         amount: "45",
         completed: false,
         verified: false,
+        completedAt: null,
+        verifiedAt: null,
         proofHash: "",
         documents: []
       },
@@ -83,6 +89,8 @@ let projectsData: Record<number, Project> = {
         amount: "30",
         completed: false,
         verified: false,
+        completedAt: null,
+        verifiedAt: null,
         proofHash: "",
         documents: []
       }
