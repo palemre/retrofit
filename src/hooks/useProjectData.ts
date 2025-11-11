@@ -24,8 +24,8 @@ export function useProjectData(projectId: number) {
   }, [projectId]);
 
   // Update investment and refresh data
-  const updateProjectInvestment = (investmentAmount: string) => {
-    const updatedProject = updateGlobalInvestment(projectId, investmentAmount);
+  const updateProjectInvestment = (investmentAmount: string, investorWallet: string) => {
+    const updatedProject = updateGlobalInvestment(projectId, investmentAmount, investorWallet);
     if (updatedProject) {
       setProject(updatedProject);
     }

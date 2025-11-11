@@ -2,7 +2,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import WalletConnect from '@/components/WalletConnect';
 import InvestModal from '@/components/InvestModal';
 import MilestoneCard from '@/components/MilestoneCard';
@@ -46,10 +46,28 @@ export default function ProjectPage() {
   }
 
   // Handle successful investment - update the project data
-  const handleInvestSuccess = (investmentAmount: string) => {
+  const handleInvestSuccess = (investmentAmount: string, investorWallet: string) => {
     if (updateProjectInvestment) {
-      updateProjectInvestment(investmentAmount);
+      updateProjectInvestment(investmentAmount, investorWallet);
     }
+  };
+
+  const formatDateTime = useMemo(
+    () =>
+      (isoString: string) => {
+        if (!isoString) return '—';
+        const date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) {
+          return '—';
+        }
+        return date.toLocaleString();
+      },
+    []
+  );
+
+  const formatWallet = (wallet: string) => {
+    if (!wallet) return '—';
+    return wallet.length > 10 ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}` : wallet;
   };
 
   // Calculate progress percentage
@@ -223,6 +241,47 @@ export default function ProjectPage() {
               </p>
             </div>
           </div>
+
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">Investment History</h3>
+            {project.investmentHistory && project.investmentHistory.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Investor Wallet</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount (ETH)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {project.investmentHistory
+                      .slice()
+                      .reverse()
+                      .map((transaction) => {
+                        const amountValue = Number.parseFloat(transaction.amount);
+                        const formattedAmount = Number.isNaN(amountValue)
+                          ? transaction.amount
+                          : amountValue.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 6,
+                            });
+
+                        return (
+                          <tr key={transaction.id}>
+                            <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(transaction.date)}</td>
+                            <td className="px-4 py-3 text-sm text-gray-700 font-mono">{formatWallet(transaction.investorWallet)}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">{formattedAmount}</td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500">No investments recorded yet. Be the first to invest!</div>
+            )}
+          </div>
         </div>
 
         {/* Impact Metrics */}
@@ -249,11 +308,55 @@ export default function ProjectPage() {
               </div>
             )}
           </div>
+
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">Milestone Release History</h3>
+            {project.milestonePayoutHistory && project.milestonePayoutHistory.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Milestone</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Released Amount (USD&nbsp;K)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {project.milestonePayoutHistory
+                      .slice()
+                      .reverse()
+                      .map((release) => {
+                        const releaseValue = Number.parseFloat(release.amount || '0');
+                        const formattedRelease = Number.isNaN(releaseValue)
+                          ? release.amount
+                          : releaseValue.toLocaleString(undefined, {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            });
+
+                        return (
+                          <tr key={release.id}>
+                            <td className="px-4 py-3 text-sm text-gray-700">{formatDateTime(release.date)}</td>
+                            <td className="px-4 py-3 text-sm text-gray-700">{release.milestoneName}</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 text-right font-semibold">
+                              ${formattedRelease}
+                              {Number.isNaN(releaseValue) ? '' : 'K'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-sm text-gray-500">Milestone releases will appear here once payouts are made.</div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Investment Modal */}
-      <InvestModal 
+      <InvestModal
         isOpen={isInvestModalOpen}
         onClose={() => setIsInvestModalOpen(false)}
         project={project}

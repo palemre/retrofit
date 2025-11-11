@@ -51,7 +51,9 @@ let projectsData: Record<number, Project> = {
       energySavings: 32,
       jobsCreated: 18,
       leedCertification: "LEED Gold"
-    }
+    },
+    investmentHistory: [],
+    milestonePayoutHistory: []
   },
   2: {
     id: 2,
@@ -100,7 +102,9 @@ let projectsData: Record<number, Project> = {
       energySavings: 27,
       jobsCreated: 22,
       leedCertification: "LEED Silver"
-    }
+    },
+    investmentHistory: [],
+    milestonePayoutHistory: []
   },
   3: {
     id: 3,
@@ -124,19 +128,31 @@ let projectsData: Record<number, Project> = {
       energySavings: 35,
       jobsCreated: 15,
       leedCertification: "LEED Platinum Pending"
-    }
+    },
+    investmentHistory: [],
+    milestonePayoutHistory: []
   }
 };
 
 // Export functions to get and update projects
 export const getProjects = () => projectsData;
-export const updateProjectInvestment = (projectId: number, investmentAmount: string) => {
+export const updateProjectInvestment = (projectId: number, investmentAmount: string, investorWallet: string) => {
   if (projectsData[projectId as keyof typeof projectsData]) {
     const currentRaised = parseFloat(projectsData[projectId].raisedAmount);
     const newInvestment = parseFloat(investmentAmount);
     projectsData[projectId].raisedAmount = (currentRaised + newInvestment).toFixed(2);
-    
+
     const currentInvestors = parseInt(projectsData[projectId].investorCount);
     projectsData[projectId].investorCount = (currentInvestors + 1).toString();
+
+    projectsData[projectId].investmentHistory = [
+      ...(projectsData[projectId].investmentHistory || []),
+      {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        amount: investmentAmount,
+        date: new Date().toISOString(),
+        investorWallet,
+      },
+    ];
   }
 };
