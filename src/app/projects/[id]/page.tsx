@@ -53,6 +53,10 @@ export default function ProjectPage() {
 
   // Calculate progress percentage
   const progressPercentage = Math.min((parseFloat(project.raisedAmount) / parseFloat(project.targetAmount)) * 100, 100);
+  const releasedFunds = parseFloat(project.projectWalletBalance || '0');
+  const formattedReleasedFunds = Number.isNaN(releasedFunds)
+    ? '0.00'
+    : releasedFunds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // Main page content - only shows when data is loaded
   return (
@@ -150,6 +154,52 @@ export default function ProjectPage() {
             >
               {project.status === 'Funding' ? 'Invest in This Project' : 'Funding Complete'}
             </button>
+          </div>
+        </div>
+
+        {/* On-Chain Asset Overview */}
+        <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">On-Chain Asset Overview</h2>
+          <p className="text-gray-600 mb-6">
+            This retrofit initiative is issued as its own ERC-1155 asset. The project token is
+            administered by the dedicated treasury wallet below, and milestone payouts are streamed
+            into that wallet once work is verified.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <div className="text-sm text-gray-500 mb-1">Token Standard</div>
+              <div className="text-lg font-semibold text-gray-900">ERC-1155</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-1">Token ID</div>
+              <div className="text-lg font-semibold text-gray-900">{project.erc1155TokenId}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-1">Contract Address</div>
+              <code className="block text-sm md:text-base text-green-700 bg-green-50 px-3 py-2 rounded-lg break-words">
+                {project.erc1155ContractAddress}
+              </code>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500 mb-1">Project Treasury Wallet</div>
+              <code className="block text-sm md:text-base text-blue-700 bg-blue-50 px-3 py-2 rounded-lg break-words">
+                {project.projectWalletAddress}
+              </code>
+            </div>
+            <div className="md:col-span-2">
+              <div className="text-sm text-gray-500 mb-1">Released Funds Currently Held</div>
+              <div className="text-lg font-semibold text-gray-900">
+                ${formattedReleasedFunds}
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Funds remain at zero until milestones are marked complete and verified, at which point the
+                corresponding tranche is deposited to the treasury wallet.
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                The ERC-1155 token is held by the treasury wallet, representing on-chain ownership of this
+                retrofit project.
+              </p>
+            </div>
           </div>
         </div>
 

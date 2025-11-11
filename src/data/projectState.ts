@@ -30,6 +30,10 @@ export interface Project {
   investorCount: string;
   address: string;
   image: string;
+  erc1155ContractAddress: string;
+  erc1155TokenId: string;
+  projectWalletAddress: string;
+  projectWalletBalance: string;
   milestones: Milestone[];
   impactMetrics: ImpactMetrics;
 }
@@ -50,6 +54,10 @@ const initialProjects: ProjectDictionary = {
     investorCount: "1",
     address: "123 Main St, New York, NY",
     image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=250&fit=crop",
+    erc1155ContractAddress: "0x8A4e4A6E2C7cF0d3A9B1d263F4e5F61b7aFf1E21",
+    erc1155TokenId: "1",
+    projectWalletAddress: "0x3F5b2c1a9D7E8f6C5b4A1234567890dEfA123456",
+    projectWalletBalance: "0",
     milestones: [
       {
         id: 1,
@@ -91,6 +99,10 @@ const initialProjects: ProjectDictionary = {
     investorCount: "0",
     address: "456 Oak Ave, Chicago, IL",
     image: "https://images.unsplash.com/photo-1513584684374-8bab748fbf90?w=400&h=250&fit=crop",
+    erc1155ContractAddress: "0x4B6c7D8E9F0a1b2C3d4E5f60718293aB4c5D6e7F",
+    erc1155TokenId: "2",
+    projectWalletAddress: "0x7C8d9e0F1A2b3c4D5e6F7890aBCdEf1234567890",
+    projectWalletBalance: "0",
     milestones: [
       {
         id: 1,
@@ -132,6 +144,10 @@ const initialProjects: ProjectDictionary = {
     investorCount: "0",
     address: "789 Heritage Lane, Boston, MA",
     image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400&h=250&fit=crop",
+    erc1155ContractAddress: "0x9d0E1F2a3B4c5D6e7F8091a2b3C4d5E6f7A8B9c0",
+    erc1155TokenId: "3",
+    projectWalletAddress: "0x12a3b4C5d6E7f8A9b0C1D2e3F4567890AbCdEf12",
+    projectWalletBalance: "0",
     milestones: [],
     impactMetrics: {
       annualCO2Reduction: 142,
@@ -160,10 +176,16 @@ export const loadProjects = (): ProjectDictionary => {
             milestones: savedProject.milestones || initialProject.milestones,
             impactMetrics: savedProject.impactMetrics || initialProject.impactMetrics,
           };
+          if (!acc[numericKey].projectWalletBalance) {
+            acc[numericKey].projectWalletBalance = '0';
+          }
         } else {
           const fallbackProject = savedProject || initialProject;
           if (fallbackProject) {
-            acc[numericKey] = fallbackProject;
+            acc[numericKey] = {
+              ...fallbackProject,
+              projectWalletBalance: fallbackProject.projectWalletBalance || '0',
+            };
           }
         }
         return acc;
@@ -215,7 +237,17 @@ export const updateMilestone = (
 
     const milestone = project.milestones.find((m: Milestone) => m.id === milestoneId);
     if (milestone) {
+      const wasVerified = milestone.verified;
+
       Object.assign(milestone, updates);
+
+      if (!wasVerified && milestone.verified) {
+        const currentBalance = parseFloat(project.projectWalletBalance || '0');
+        const milestoneAmount = parseFloat(milestone.amount || '0');
+        const updatedBalance = currentBalance + (isNaN(milestoneAmount) ? 0 : milestoneAmount);
+        project.projectWalletBalance = updatedBalance.toFixed(2);
+      }
+
       saveProjects(projects);
       return milestone;
     }
