@@ -10,12 +10,14 @@ import ImpactMetrics from '@/components/ImpactMetrics';
 import { useProjectData } from '@/hooks/useProjectData';
 import ProjectTimeline from '@/components/ProjectTimeline';
 import AIAgentPanel from '@/components/AIAgentPanel';
+import DataRoomModal from '@/components/DataRoomModal';
 
 export default function ProjectPage() {
   const params = useParams();
   const projectId = parseInt(params.id as string);
   const { project, loading, updateProjectInvestment, refreshProject, resetFunding } = useProjectData(projectId);
   const [isInvestModalOpen, setIsInvestModalOpen] = useState(false);
+  const [isDataRoomOpen, setIsDataRoomOpen] = useState(false);
   const [isResettingFunding, setIsResettingFunding] = useState(false);
   const [activeMilestoneId, setActiveMilestoneId] = useState<number | null>(null);
 
@@ -189,14 +191,23 @@ export default function ProjectPage() {
               </div>
             </div>
 
-            {/* Invest Button */}
-            <button 
-              onClick={() => setIsInvestModalOpen(true)}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg text-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-              disabled={project.status !== 'Funding'}
-            >
-              {project.status === 'Funding' ? 'Invest in This Project' : 'Funding Complete'}
-            </button>
+            {/* Data Room & Invest Actions */}
+            <div className="space-y-3">
+              <button
+                onClick={() => setIsDataRoomOpen(true)}
+                className="w-full rounded-lg border border-green-600 bg-white px-6 py-4 text-lg font-semibold text-green-700 transition-colors hover:bg-green-50"
+              >
+                Open Project Data Room
+              </button>
+
+              <button
+                onClick={() => setIsInvestModalOpen(true)}
+                className="w-full rounded-lg bg-green-600 px-6 py-4 text-lg font-bold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-400"
+                disabled={project.status !== 'Funding'}
+              >
+                {project.status === 'Funding' ? 'Invest in This Project' : 'Funding Complete'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -376,6 +387,12 @@ export default function ProjectPage() {
         onClose={() => setIsInvestModalOpen(false)}
         project={project}
         onInvestSuccess={handleInvestSuccess}
+      />
+
+      <DataRoomModal
+        isOpen={isDataRoomOpen}
+        onClose={() => setIsDataRoomOpen(false)}
+        projectName={project.name}
       />
     </div>
   );
