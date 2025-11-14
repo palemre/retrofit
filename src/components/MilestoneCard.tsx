@@ -227,6 +227,7 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
                   ) : (
                     <div className="text-sm text-gray-500">No documents uploaded.</div>
                   )}
+                </div>
               </div>
             )}
 
