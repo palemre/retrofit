@@ -2,7 +2,7 @@
 'use client';
 
 import { MouseEvent, useMemo, useState } from 'react';
-import { updateMilestone, Milestone } from '@/data/projectState';
+import { Milestone, updateMilestone } from '@/data/projectState';
 
 interface MilestoneCardProps {
   milestone: Milestone;
@@ -10,152 +10,159 @@ interface MilestoneCardProps {
   onMilestoneUpdate?: () => void;
 }
 
+type MilestoneAction = 'complete' | 'verify' | 'reset';
+
+const statusStyles: Record<'default' | 'completed' | 'verified', string> = {
+  default: 'bg-yellow-100 text-yellow-800',
+  completed: 'bg-blue-100 text-blue-800',
+  verified: 'bg-green-100 text-green-800',
+};
+
+const statusLabel = (milestone: Milestone): string => {
+  if (milestone.verified) {
+    return 'Verified';
+  }
+  if (milestone.completed) {
+    return 'Pending Verification';
+  }
+  return 'Not Started';
+};
+
 export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate }: MilestoneCardProps) {
-  const [submittingAction, setSubmittingAction] = useState<'complete' | 'verify' | 'reset' | null>(null);
+  const [pendingAction, setPendingAction] = useState<MilestoneAction | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const isSubmitting = submittingAction !== null;
 
   const formattedCompletedAt = useMemo(() => {
     if (!milestone.completedAt) return null;
     const date = new Date(milestone.completedAt);
-    return date.toLocaleString();
+    return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
   }, [milestone.completedAt]);
 
   const formattedVerifiedAt = useMemo(() => {
     if (!milestone.verifiedAt) return null;
     const date = new Date(milestone.verifiedAt);
-    return date.toLocaleString();
+    return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
   }, [milestone.verifiedAt]);
 
-  const handleVerify = async (event?: MouseEvent<HTMLButtonElement>) => {
+  const isSubmitting = pendingAction !== null;
+  const cardStatusStyle = milestone.verified
+    ? statusStyles.verified
+    : milestone.completed
+      ? statusStyles.completed
+      : statusStyles.default;
+
+  const handleAction = async (
+    action: MilestoneAction,
+    updates: Partial<Milestone>,
+    event?: MouseEvent<HTMLButtonElement>,
+  ) => {
     event?.stopPropagation();
-    setSubmittingAction('verify');
+    setPendingAction(action);
     try {
-      await updateMilestone(projectId, milestone.id, { verified: true });
-      if (onMilestoneUpdate) onMilestoneUpdate();
+      await updateMilestone(projectId, milestone.id, updates);
+      onMilestoneUpdate?.();
     } catch (error) {
-      console.error('Error verifying milestone:', error);
+      console.error(`Error performing milestone ${action}:`, error);
     } finally {
-      setSubmittingAction(null);
+      setPendingAction(null);
     }
   };
 
-  const handleComplete = async (event?: MouseEvent<HTMLButtonElement>) => {
-    event?.stopPropagation();
-    setSubmittingAction('complete');
-    try {
-      await updateMilestone(projectId, milestone.id, { completed: true });
-      if (onMilestoneUpdate) onMilestoneUpdate();
-    } catch (error) {
-      console.error('Error completing milestone:', error);
-    } finally {
-      setSubmittingAction(null);
-    }
-  };
+  const closeModal = () => setIsModalOpen(false);
+  const openModal = () => setIsModalOpen(true);
 
-  const handleReset = async (event?: MouseEvent<HTMLButtonElement>) => {
-    event?.stopPropagation();
-    setSubmittingAction('reset');
-    try {
-      await updateMilestone(projectId, milestone.id, { completed: false, verified: false });
-      if (onMilestoneUpdate) onMilestoneUpdate();
-    } catch (error) {
-      console.error('Error resetting milestone:', error);
-    } finally {
-      setSubmittingAction(null);
-    }
-  };
+  const milestoneDocuments = Array.isArray(milestone.documents) ? milestone.documents : [];
+  const hasDocuments = milestoneDocuments.length > 0;
 
   return (
     <>
       <div
-        className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
+        className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer focus:outline-none focus:ring-2 focus:ring-green-500"
         role="button"
         tabIndex={0}
-        onClick={() => setIsModalOpen(true)}
+        onClick={openModal}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            setIsModalOpen(true);
+            openModal();
           }
         }}
       >
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${
-              milestone.verified ? 'bg-green-500' : milestone.completed ? 'bg-blue-500' : 'bg-gray-400'
-            }`}
-          >
-            {milestone.id}
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                milestone.verified ? 'bg-green-500' : milestone.completed ? 'bg-blue-500' : 'bg-gray-400'
+              }`}
+            >
+              {milestone.id}
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 text-lg">{milestone.name}</h3>
+              <p className="text-gray-600">{milestone.description}</p>
+              <p className="text-sm text-gray-500 mt-1">Funding: ${milestone.amount}K</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-900 text-lg">{milestone.name}</h3>
-            <p className="text-gray-600">{milestone.description}</p>
-            <p className="text-sm text-gray-500 mt-1">Funding: ${milestone.amount}K</p>
-          </div>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${cardStatusStyle}`}>
+            {statusLabel(milestone)}
+          </span>
         </div>
-        <div
-          className={`px-3 py-1 rounded-full text-sm font-medium ${
-            milestone.verified ? 'bg-green-100 text-green-800' :
-            milestone.completed ? 'bg-blue-100 text-blue-800' :
-            'bg-yellow-100 text-yellow-800'
-          }`}
-        >
-          {milestone.verified ? 'Verified' : milestone.completed ? 'Pending Verification' : 'Not Started'}
-        </div>
+
         {(formattedCompletedAt || formattedVerifiedAt) && (
           <div className="text-sm text-gray-500 space-y-1 mt-4">
             {formattedCompletedAt && (
-              <div>
-                Completed on <span className="font-medium text-gray-600">{formattedCompletedAt}</span>
-                </div>
-              </div>
+              <p>
+                Completed on{' '}
+                <span className="font-medium text-gray-600">{formattedCompletedAt}</span>
+              </p>
             )}
             {formattedVerifiedAt && (
-              <div>
-                Verified on <span className="font-medium text-gray-600">{formattedVerifiedAt}</span>
-              </div>
-                  )}
-                </div>
-              </div>
+              <p>
+                Verified on{' '}
+                <span className="font-medium text-gray-600">{formattedVerifiedAt}</span>
+              </p>
             )}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3 mt-4">
           {!milestone.completed && (
             <button
-              onClick={(event) => handleComplete(event)}
+              type="button"
+              onClick={(event) => handleAction('complete', { completed: true }, event)}
               disabled={isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:bg-gray-400 transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
-              {submittingAction === 'complete' ? 'Marking...' : 'Mark Complete'}
+              {pendingAction === 'complete' ? 'Marking...' : 'Mark Complete'}
             </button>
           )}
 
           {milestone.completed && !milestone.verified && (
             <button
-              onClick={(event) => handleVerify(event)}
+              type="button"
+              onClick={(event) => handleAction('verify', { verified: true }, event)}
               disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:bg-gray-400 transition-colors"
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
-              {submittingAction === 'verify' ? 'Verifying...' : 'Verify Work'}
+              {pendingAction === 'verify' ? 'Verifying...' : 'Verify Work'}
             </button>
           )}
 
           {milestone.verified && (
-            <span className="text-green-600 font-medium flex items-center gap-2">
-              <span>✅</span>
+            <span className="text-green-600 font-medium flex items-center gap-2 text-sm">
+              <span aria-hidden="true">✅</span>
               Verified and Paid
             </span>
           )}
 
           {(milestone.completed || milestone.verified) && (
             <button
-              onClick={(event) => handleReset(event)}
+              type="button"
+              onClick={(event) => handleAction('reset', { completed: false, verified: false }, event)}
               disabled={isSubmitting}
-              className="ml-auto text-sm text-red-600 hover:text-red-700 font-medium border border-red-200 hover:border-red-300 px-3 py-2 rounded-lg transition-colors disabled:text-red-300 disabled:border-red-100"
+              className="ml-auto text-sm text-red-600 hover:text-red-700 font-medium border border-red-200 hover:border-red-300 px-3 py-2 rounded-lg transition-colors disabled:text-red-300 disabled:border-red-100 disabled:cursor-not-allowed"
             >
-              {submittingAction === 'reset' ? 'Resetting...' : 'Reset Milestone'}
+              {pendingAction === 'reset' ? 'Resetting...' : 'Reset Milestone'}
             </button>
           )}
         </div>
@@ -167,7 +174,7 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
           role="dialog"
           aria-modal="true"
           aria-labelledby={`milestone-${milestone.id}-title`}
-          onClick={() => setIsModalOpen(false)}
+          onClick={closeModal}
         >
           <div
             className="max-w-2xl w-full bg-white rounded-xl shadow-2xl p-6 relative"
@@ -182,8 +189,9 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                aria-label="Close milestone details"
               >
                 ×
               </button>
@@ -196,13 +204,7 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">Status</h4>
-                <p className="text-base font-medium text-gray-900">
-                  {milestone.verified
-                    ? 'Verified and Paid'
-                    : milestone.completed
-                      ? 'Completed • Awaiting Verification'
-                      : 'Not Started'}
-                </p>
+                <p className="text-base font-medium text-gray-900">{statusLabel(milestone)}</p>
                 {formattedCompletedAt && (
                   <p className="text-sm text-gray-500 mt-2">Completed on {formattedCompletedAt}</p>
                 )}
@@ -212,12 +214,12 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
               </div>
             </div>
 
-            {milestone.completed && (
+            {(milestone.completed || hasDocuments) && (
               <div className="mt-6">
                 <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Proof of Work</h4>
                 <div className="space-y-2">
-                  {milestone.documents.length > 0 ? (
-                    milestone.documents.map((document) => (
+                  {hasDocuments ? (
+                    milestoneDocuments.map((document) => (
                       <div
                         key={document}
                         className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-700 shadow-sm"
@@ -245,36 +247,40 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
             <div className="mt-6 flex flex-wrap gap-3">
               {!milestone.completed && (
                 <button
-                  onClick={handleComplete}
+                  type="button"
+                  onClick={(event) => handleAction('complete', { completed: true }, event)}
                   disabled={isSubmitting}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:bg-gray-400 transition-colors"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
-                  {submittingAction === 'complete' ? 'Marking...' : 'Mark Complete'}
+                  {pendingAction === 'complete' ? 'Marking...' : 'Mark Complete'}
                 </button>
               )}
 
               {milestone.completed && !milestone.verified && (
                 <button
-                  onClick={handleVerify}
+                  type="button"
+                  onClick={(event) => handleAction('verify', { verified: true }, event)}
                   disabled={isSubmitting}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:bg-gray-400 transition-colors"
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
-                  {submittingAction === 'verify' ? 'Verifying...' : 'Verify Work'}
+                  {pendingAction === 'verify' ? 'Verifying...' : 'Verify Work'}
                 </button>
               )}
 
               {(milestone.completed || milestone.verified) && (
                 <button
-                  onClick={handleReset}
+                  type="button"
+                  onClick={(event) => handleAction('reset', { completed: false, verified: false }, event)}
                   disabled={isSubmitting}
-                  className="text-sm text-red-600 hover:text-red-700 font-medium border border-red-200 hover:border-red-300 px-3 py-2 rounded-lg transition-colors disabled:text-red-300 disabled:border-red-100"
+                  className="text-sm text-red-600 hover:text-red-700 font-medium border border-red-200 hover:border-red-300 px-3 py-2 rounded-lg transition-colors disabled:text-red-300 disabled:border-red-100 disabled:cursor-not-allowed"
                 >
-                  {submittingAction === 'reset' ? 'Resetting...' : 'Reset Milestone'}
+                  {pendingAction === 'reset' ? 'Resetting...' : 'Reset Milestone'}
                 </button>
               )}
 
               <button
-                onClick={() => setIsModalOpen(false)}
+                type="button"
+                onClick={closeModal}
                 className="ml-auto text-sm text-gray-600 hover:text-gray-800 font-medium border border-gray-200 hover:border-gray-300 px-3 py-2 rounded-lg transition-colors"
               >
                 Close
