@@ -1,4 +1,3 @@
-// src/components/MilestoneCard.tsx
 'use client';
 
 import { MouseEvent, useMemo, useState } from 'react';
@@ -13,16 +12,23 @@ interface MilestoneCardProps {
 export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate }: MilestoneCardProps) {
   const [submittingAction, setSubmittingAction] = useState<'complete' | 'verify' | 'reset' | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
   const isSubmitting = submittingAction !== null;
 
   const formattedCompletedAt = useMemo(() => {
-    if (!milestone.completedAt) return null;
+    if (!milestone.completedAt) {
+      return null;
+    }
+
     const date = new Date(milestone.completedAt);
     return date.toLocaleString();
   }, [milestone.completedAt]);
 
   const formattedVerifiedAt = useMemo(() => {
-    if (!milestone.verifiedAt) return null;
+    if (!milestone.verifiedAt) {
+      return null;
+    }
+
     const date = new Date(milestone.verifiedAt);
     return date.toLocaleString();
   }, [milestone.verifiedAt]);
@@ -30,9 +36,10 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
   const handleVerify = async (event?: MouseEvent<HTMLButtonElement>) => {
     event?.stopPropagation();
     setSubmittingAction('verify');
+
     try {
       await updateMilestone(projectId, milestone.id, { verified: true });
-      if (onMilestoneUpdate) onMilestoneUpdate();
+      onMilestoneUpdate?.();
     } catch (error) {
       console.error('Error verifying milestone:', error);
     } finally {
@@ -43,9 +50,10 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
   const handleComplete = async (event?: MouseEvent<HTMLButtonElement>) => {
     event?.stopPropagation();
     setSubmittingAction('complete');
+
     try {
       await updateMilestone(projectId, milestone.id, { completed: true });
-      if (onMilestoneUpdate) onMilestoneUpdate();
+      onMilestoneUpdate?.();
     } catch (error) {
       console.error('Error completing milestone:', error);
     } finally {
@@ -56,9 +64,10 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
   const handleReset = async (event?: MouseEvent<HTMLButtonElement>) => {
     event?.stopPropagation();
     setSubmittingAction('reset');
+
     try {
       await updateMilestone(projectId, milestone.id, { completed: false, verified: false });
-      if (onMilestoneUpdate) onMilestoneUpdate();
+      onMilestoneUpdate?.();
     } catch (error) {
       console.error('Error resetting milestone:', error);
     } finally {
@@ -84,26 +93,28 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
           <div className="flex items-center gap-4">
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${
-              milestone.verified ? 'bg-green-500' : milestone.completed ? 'bg-blue-500' : 'bg-gray-400'
+                milestone.verified ? 'bg-green-500' : milestone.completed ? 'bg-blue-500' : 'bg-gray-400'
+              }`}
+            >
+              {milestone.id}
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900 text-lg">{milestone.name}</h3>
+              <p className="text-gray-600">{milestone.description}</p>
+              <p className="text-sm text-gray-500 mt-1">Funding: ${milestone.amount}K</p>
+            </div>
+          </div>
+          <div
+            className={`px-3 py-1 rounded-full text-sm font-medium ${
+              milestone.verified ? 'bg-green-100 text-green-800' :
+              milestone.completed ? 'bg-blue-100 text-blue-800' :
+              'bg-yellow-100 text-yellow-800'
             }`}
           >
-            {milestone.id}
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900 text-lg">{milestone.name}</h3>
-            <p className="text-gray-600">{milestone.description}</p>
-            <p className="text-sm text-gray-500 mt-1">Funding: ${milestone.amount}K</p>
+            {milestone.verified ? 'Verified' : milestone.completed ? 'Pending Verification' : 'Not Started'}
           </div>
         </div>
-        <div
-          className={`px-3 py-1 rounded-full text-sm font-medium ${
-            milestone.verified ? 'bg-green-100 text-green-800' :
-            milestone.completed ? 'bg-blue-100 text-blue-800' :
-            'bg-yellow-100 text-yellow-800'
-          }`}
-        >
-          {milestone.verified ? 'Verified' : milestone.completed ? 'Pending Verification' : 'Not Started'}
-        </div>
+
         {(formattedCompletedAt || formattedVerifiedAt) && (
           <div className="text-sm text-gray-500 space-y-1 mt-4">
             {formattedCompletedAt && (
