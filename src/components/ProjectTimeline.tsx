@@ -54,6 +54,7 @@ const getPointsDeltaFromHistory = (entryPoints: number, awards?: { points?: numb
 
 export default function ProjectTimeline({ milestones = [], scorecard, onSelectMilestone }: ProjectTimelineProps) {
   const [yAxisMode, setYAxisMode] = useState<'cumulative' | 'individual'>('cumulative');
+  const [eventFilter, setEventFilter] = useState<'all' | 'verified'>('all');
 
   const timeline = useMemo(() => {
     const events: TimelineEvent[] = [];
@@ -198,6 +199,11 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
       .map((event, index) => `${index === 0 ? 'M' : 'L'}${event.x},${event.y}`)
       .join(' ');
 
+    const filteredEvents =
+      eventFilter === 'all'
+        ? eventsWithPosition
+        : eventsWithPosition.filter((event) => event.type === 'verified');
+
     const tickCount = Math.min(5, Math.max(2, eventsWithPosition.length));
     const xTicks: { x: number; label: string }[] = [];
     if (tickCount > 0) {
@@ -237,13 +243,13 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
     }
 
     return {
-      events: eventsWithPosition,
+      events: filteredEvents,
       linePath,
       xTicks,
       yTicks,
       yAxisLabel: yAxisMode === 'cumulative' ? 'Cumulative LEED Points' : 'LEED Points Earned per Milestone',
     };
-  }, [milestones, scorecard, yAxisMode]);
+  }, [eventFilter, milestones, scorecard, yAxisMode]);
 
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const hoveredEvent = timeline.events.find((event) => event.id === hoveredEventId) || null;
@@ -257,7 +263,7 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
             Track milestone progress and LEED point verification over time.
           </p>
         </div>
-        <div className="flex items-center gap-4 text-sm text-gray-600">
+        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <span className="inline-flex h-3 w-3 rounded-full bg-blue-500" aria-hidden="true"></span>
             <span>Milestone Completed</span>
@@ -266,6 +272,19 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
             <span className="inline-flex h-3 w-3 rounded-full bg-green-500" aria-hidden="true"></span>
             <span>Milestone Verified</span>
           </div>
+          <label className="flex items-center gap-2 whitespace-nowrap">
+            <span className="text-gray-500">Show</span>
+            <select
+              value={eventFilter}
+              onChange={(event) =>
+                setEventFilter(event.target.value === 'verified' ? 'verified' : 'all')
+              }
+              className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Completed & Verified</option>
+              <option value="verified">Verified Only</option>
+            </select>
+          </label>
           <label className="flex items-center gap-2">
             <span className="text-gray-500">Y-Axis</span>
             <select
