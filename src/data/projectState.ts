@@ -104,6 +104,43 @@ const normalizeMilestones = (milestones: Milestone[] = []): Milestone[] =>
     leedHistoryId: milestone.leedHistoryId ?? null,
   }));
 
+const mergeMilestones = (
+  initialMilestones: Milestone[] = [],
+  savedMilestones: Milestone[] = []
+): Milestone[] => {
+  if (initialMilestones.length === 0 && savedMilestones.length === 0) {
+    return [];
+  }
+
+  const savedById = new Map<number, Milestone>();
+  savedMilestones.forEach((milestone) => {
+    if (milestone && typeof milestone.id === 'number') {
+      savedById.set(milestone.id, milestone);
+    }
+  });
+
+  const merged: Milestone[] = initialMilestones.map((initialMilestone) => {
+    const savedMilestone = savedById.get(initialMilestone.id);
+    if (savedMilestone) {
+      savedById.delete(initialMilestone.id);
+      return {
+        ...initialMilestone,
+        ...savedMilestone,
+      };
+    }
+
+    return initialMilestone;
+  });
+
+  savedMilestones.forEach((savedMilestone) => {
+    if (!initialMilestones.some((initialMilestone) => initialMilestone.id === savedMilestone.id)) {
+      merged.push(savedMilestone);
+    }
+  });
+
+  return normalizeMilestones(merged);
+};
+
 const normalizeScorecard = (scorecard?: LeedScorecard | null): LeedScorecard | undefined => {
   if (!scorecard) {
     return scorecard ?? undefined;
@@ -683,7 +720,7 @@ export const loadProjects = (): ProjectDictionary => {
           acc[numericKey] = withProjectDefaults({
             ...initialProject,
             ...savedProject,
-            milestones: normalizeMilestones(savedProject.milestones || initialProject.milestones),
+            milestones: mergeMilestones(initialProject?.milestones, savedProject?.milestones),
             impactMetrics: (mergedImpactMetrics || initialImpactMetrics || savedImpactMetrics) as ImpactMetrics,
             investmentHistory: savedProject.investmentHistory || initialProject.investmentHistory || [],
             milestonePayoutHistory: savedProject.milestonePayoutHistory || initialProject.milestonePayoutHistory || [],
@@ -705,7 +742,7 @@ export const loadProjects = (): ProjectDictionary => {
 
             acc[numericKey] = withProjectDefaults({
               ...fallbackProject,
-              milestones: normalizeMilestones(fallbackProject.milestones),
+              milestones: mergeMilestones(initialProject?.milestones, fallbackProject.milestones),
               impactMetrics: (mergedFallbackImpact || fallbackImpactMetrics || initialImpactMetrics) as ImpactMetrics,
             });
           }
