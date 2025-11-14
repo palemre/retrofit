@@ -112,7 +112,7 @@ export default function ProjectPage() {
       </header>
 
       {/* Project Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 pb-40">
         {/* Back button */}
         <button 
           onClick={() => window.history.back()}
