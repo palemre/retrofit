@@ -119,7 +119,7 @@ export default function ImpactMetrics({ metrics }: ImpactMetricsProps) {
           role="dialog"
           aria-modal="true"
         >
-          <div className="relative max-w-4xl w-full bg-white rounded-2xl shadow-2xl">
+          <div className="relative max-w-4xl w-full bg-white rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
             <button
               type="button"
               onClick={() => setIsScorecardOpen(false)}
@@ -128,7 +128,7 @@ export default function ImpactMetrics({ metrics }: ImpactMetricsProps) {
             >
               ✕
             </button>
-            <div className="p-6 md:p-8">
+            <div className="p-6 md:p-8 overflow-y-auto">
               <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900">LEED Certification Scorecard</h3>
