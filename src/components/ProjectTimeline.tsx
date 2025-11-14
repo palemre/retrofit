@@ -53,6 +53,8 @@ const getPointsDeltaFromHistory = (entryPoints: number, awards?: { points?: numb
 };
 
 export default function ProjectTimeline({ milestones = [], scorecard, onSelectMilestone }: ProjectTimelineProps) {
+  const [yAxisMode, setYAxisMode] = useState<'cumulative' | 'individual'>('cumulative');
+
   const timeline = useMemo(() => {
     const events: TimelineEvent[] = [];
     const verifiedEvents: TimelineEvent[] = [];
@@ -145,6 +147,10 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
         linePath: '',
         xTicks: [] as { x: number; label: string }[],
         yTicks: [] as number[],
+        yAxisLabel:
+          yAxisMode === 'cumulative'
+            ? 'Cumulative LEED Points'
+            : 'LEED Points Earned per Milestone',
       };
     }
 
@@ -161,7 +167,11 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
     const paddedMax = maxTime + 12 * 60 * 60 * 1000;
     const timeRange = Math.max(1, paddedMax - paddedMin);
 
-    const maxPoints = events.reduce((max, event) => Math.max(max, event.cumulativePoints), 0);
+    const maxPoints = events.reduce((max, event) => {
+      const candidate =
+        yAxisMode === 'cumulative' ? event.cumulativePoints : event.pointsDelta;
+      return Math.max(max, candidate);
+    }, 0);
     const safeMaxPoints = Math.max(maxPoints, 1);
     const pointsRange = safeMaxPoints;
 
@@ -169,13 +179,14 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
     const innerHeight = chartHeight - padding.top - padding.bottom;
 
     const eventsWithPosition = events.map((event) => {
+      const yValue = yAxisMode === 'cumulative' ? event.cumulativePoints : event.pointsDelta;
       const x =
         padding.left +
         ((event.date.getTime() - paddedMin) / timeRange) * innerWidth;
       const y =
         chartHeight -
         padding.bottom -
-        (pointsRange === 0 ? 0 : (event.cumulativePoints / pointsRange) * innerHeight);
+        (pointsRange === 0 ? 0 : (yValue / pointsRange) * innerHeight);
 
       return {
         ...event,
@@ -226,8 +237,9 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
       linePath,
       xTicks,
       yTicks,
+      yAxisLabel: yAxisMode === 'cumulative' ? 'Cumulative LEED Points' : 'LEED Points Earned per Milestone',
     };
-  }, [milestones, scorecard]);
+  }, [milestones, scorecard, yAxisMode]);
 
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const hoveredEvent = timeline.events.find((event) => event.id === hoveredEventId) || null;
@@ -250,6 +262,19 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
             <span className="inline-flex h-3 w-3 rounded-full bg-green-500" aria-hidden="true"></span>
             <span>Milestone Verified</span>
           </div>
+          <label className="flex items-center gap-2">
+            <span className="text-gray-500">Y-Axis</span>
+            <select
+              value={yAxisMode}
+              onChange={(event) =>
+                setYAxisMode(event.target.value === 'cumulative' ? 'cumulative' : 'individual')
+              }
+              className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="cumulative">Cumulative Points</option>
+              <option value="individual">Points per Milestone</option>
+            </select>
+          </label>
         </div>
       </div>
 
@@ -349,7 +374,7 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
               className="fill-gray-500 text-xs font-medium"
               textAnchor="start"
             >
-              Cumulative LEED Points
+              {timeline.yAxisLabel}
             </text>
           </svg>
 
