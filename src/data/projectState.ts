@@ -1,5 +1,11 @@
 // src/data/projectState.ts
 
+export interface LeedPointContribution {
+  category: string;
+  points: number;
+  note?: string;
+}
+
 export interface Milestone {
   id: number;
   name: string;
@@ -11,6 +17,7 @@ export interface Milestone {
   verifiedAt?: string | null;
   proofHash: string;
   documents: string[];
+  leedPointContributions?: LeedPointContribution[];
 }
 
 export interface InvestmentTransaction {
@@ -28,11 +35,40 @@ export interface MilestonePayoutTransaction {
   date: string;
 }
 
+export interface LeedScoreCategory {
+  category: string;
+  achievedPoints: number;
+  availablePoints: number;
+  notes?: string;
+  baseAchievedPoints?: number;
+}
+
+export interface LeedScorecard {
+  certificationLevel: string;
+  totalPoints: number;
+  certificationDate?: string;
+  reviewingOrganization?: string;
+  scorecardStatus?: string;
+  categories: LeedScoreCategory[];
+  baseTotalPoints?: number;
+  history?: LeedScoreHistoryEntry[];
+}
+
+export interface LeedScoreHistoryEntry {
+  milestoneId: number;
+  milestoneName: string;
+  category: string;
+  pointsAwarded: number;
+  awardedAt: string;
+  note?: string;
+}
+
 export interface ImpactMetrics {
   annualCO2Reduction: number; // tons of CO₂ avoided annually
   energySavings: number; // percentage improvement in efficiency
   jobsCreated: number; // number of local jobs supported
   leedCertification: string;
+  leedScorecard?: LeedScorecard;
 }
 
 export interface Project {
@@ -59,6 +95,84 @@ export interface Project {
 
 type ProjectDictionary = Record<number, Project>;
 
+const recalculateLeedScorecard = (scorecard: LeedScorecard): LeedScorecard => {
+  const baseTotal = scorecard.baseTotalPoints ?? scorecard.totalPoints ?? 0;
+  const history = scorecard.history ?? [];
+
+  const contributionsByCategory = history.reduce<Record<string, number>>((acc, entry) => {
+    acc[entry.category] = (acc[entry.category] || 0) + entry.pointsAwarded;
+    return acc;
+  }, {});
+
+  const existingCategories = scorecard.categories || [];
+
+  const categories = existingCategories.map((category) => {
+    const base = category.baseAchievedPoints ?? category.achievedPoints ?? 0;
+    return {
+      ...category,
+      baseAchievedPoints: base,
+      achievedPoints: base + (contributionsByCategory[category.category] || 0),
+    };
+  });
+
+  const knownCategoryNames = new Set(categories.map((category) => category.category));
+  const additionalCategories = Object.entries(contributionsByCategory)
+    .filter(([category]) => !knownCategoryNames.has(category))
+    .map(([category, points]) => ({
+      category,
+      achievedPoints: points,
+      availablePoints: points,
+      notes: undefined,
+      baseAchievedPoints: 0,
+    }));
+
+  const totalPoints = baseTotal + history.reduce((sum, entry) => sum + entry.pointsAwarded, 0);
+
+  return {
+    ...scorecard,
+    baseTotalPoints: baseTotal,
+    history,
+    categories: [...categories, ...additionalCategories],
+    totalPoints,
+  };
+};
+
+const withLeedScorecardDefaults = (scorecard?: LeedScorecard): LeedScorecard | undefined => {
+  if (!scorecard) return undefined;
+
+  const normalized: LeedScorecard = {
+    ...scorecard,
+    baseTotalPoints: scorecard.baseTotalPoints ?? scorecard.totalPoints ?? 0,
+    history: scorecard.history ?? [],
+    categories: (scorecard.categories || []).map((category) => ({
+      ...category,
+      baseAchievedPoints: category.baseAchievedPoints ?? category.achievedPoints ?? 0,
+      achievedPoints: category.achievedPoints ?? category.baseAchievedPoints ?? 0,
+    })),
+  };
+
+  return recalculateLeedScorecard(normalized);
+};
+
+const mergeLeedScorecard = (
+  initialScorecard?: LeedScorecard,
+  savedScorecard?: LeedScorecard
+): LeedScorecard | undefined => {
+  if (!initialScorecard && !savedScorecard) {
+    return undefined;
+  }
+
+  const categories = savedScorecard?.categories ?? initialScorecard?.categories ?? [];
+  const history = savedScorecard?.history ?? initialScorecard?.history ?? [];
+
+  return withLeedScorecardDefaults({
+    ...(initialScorecard || {}),
+    ...(savedScorecard || {}),
+    categories,
+    history,
+  });
+};
+
 const normalizeMilestones = (milestones: Milestone[] = []): Milestone[] =>
   milestones.map((milestone) => ({
     ...milestone,
@@ -66,6 +180,7 @@ const normalizeMilestones = (milestones: Milestone[] = []): Milestone[] =>
     documents: milestone.documents || [],
     completedAt: milestone.completedAt ?? null,
     verifiedAt: milestone.verifiedAt ?? null,
+    leedPointContributions: milestone.leedPointContributions || [],
   }));
 
 const withProjectDefaults = (project: Project): Project => ({
@@ -74,6 +189,12 @@ const withProjectDefaults = (project: Project): Project => ({
   milestones: normalizeMilestones(project.milestones || []),
   investmentHistory: project.investmentHistory || [],
   milestonePayoutHistory: project.milestonePayoutHistory || [],
+  impactMetrics: project.impactMetrics
+    ? {
+        ...project.impactMetrics,
+        leedScorecard: withLeedScorecardDefaults(project.impactMetrics.leedScorecard),
+      }
+    : project.impactMetrics,
 });
 
 // Initial projects data WITH MILESTONES AND IMPACT METRICS
@@ -105,7 +226,19 @@ const initialProjects: ProjectDictionary = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          {
+            category: "Energy & Atmosphere",
+            points: 3,
+            note: "Production data validates enhanced renewable energy performance.",
+          },
+          {
+            category: "Innovation",
+            points: 1,
+            note: "Verified real-time solar performance dashboard in operation.",
+          },
+        ],
       },
       {
         id: 2,
@@ -117,14 +250,83 @@ const initialProjects: ProjectDictionary = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          {
+            category: "Energy & Atmosphere",
+            points: 2,
+            note: "Envelope testing confirms improved thermal performance.",
+          },
+          {
+            category: "Indoor Environmental Quality",
+            points: 2,
+            note: "Daylight and glare analyses exceed post-retrofit thresholds.",
+          },
+        ],
       }
     ]),
     impactMetrics: {
       annualCO2Reduction: 128,
       energySavings: 32,
       jobsCreated: 18,
-      leedCertification: "LEED Gold"
+      leedCertification: "LEED Gold",
+      leedScorecard: {
+        certificationLevel: "LEED v4 BD+C: Major Renovation",
+        totalPoints: 79,
+        certificationDate: "2024-03-18",
+        reviewingOrganization: "U.S. Green Building Council",
+        scorecardStatus: "Certification Awarded",
+        categories: [
+          {
+            category: "Location & Transportation",
+            achievedPoints: 12,
+            availablePoints: 16,
+            notes: "Transit access, reduced parking footprint, and bike facilities.",
+          },
+          {
+            category: "Sustainable Sites",
+            achievedPoints: 8,
+            availablePoints: 10,
+            notes: "High-performance roof and rainwater management installed.",
+          },
+          {
+            category: "Water Efficiency",
+            achievedPoints: 7,
+            availablePoints: 11,
+            notes: "Fixture upgrades deliver a 36% indoor water use reduction.",
+          },
+          {
+            category: "Energy & Atmosphere",
+            achievedPoints: 26,
+            availablePoints: 33,
+            notes: "Solar array and controls drive a 28% modeled energy cost savings.",
+          },
+          {
+            category: "Materials & Resources",
+            achievedPoints: 6,
+            availablePoints: 13,
+            notes: "Reused existing envelope and tracked EPD-backed materials.",
+          },
+          {
+            category: "Indoor Environmental Quality",
+            achievedPoints: 11,
+            availablePoints: 16,
+            notes: "Daylight sensors and low-VOC finishes improve occupant comfort.",
+          },
+          {
+            category: "Innovation",
+            achievedPoints: 5,
+            availablePoints: 6,
+            notes: "Green cleaning program and education dashboard earn innovation credits.",
+          },
+          {
+            category: "Regional Priority",
+            achievedPoints: 4,
+            availablePoints: 4,
+            notes: "Heat island mitigation aligns with NYSERDA regional priorities.",
+          },
+        ],
+      },
     },
     investmentHistory: [],
     milestonePayoutHistory: []
@@ -156,7 +358,19 @@ const initialProjects: ProjectDictionary = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          {
+            category: "Energy & Atmosphere",
+            points: 4,
+            note: "Commissioning report confirms modeled HVAC savings achieved.",
+          },
+          {
+            category: "Indoor Environmental Quality",
+            points: 1,
+            note: "Verified ventilation improvements across occupied units.",
+          },
+        ],
       },
       {
         id: 2,
@@ -168,14 +382,83 @@ const initialProjects: ProjectDictionary = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          {
+            category: "Energy & Atmosphere",
+            points: 2,
+            note: "Blower door testing shows airtightness surpasses baseline.",
+          },
+          {
+            category: "Water Efficiency",
+            points: 1,
+            note: "Thermal envelope enables heat-pump water heater efficiency gains.",
+          },
+        ],
       }
     ]),
     impactMetrics: {
       annualCO2Reduction: 94,
       energySavings: 27,
       jobsCreated: 22,
-      leedCertification: "LEED Silver"
+      leedCertification: "LEED Silver",
+      leedScorecard: {
+        certificationLevel: "LEED v4.1 O+M: Multifamily",
+        totalPoints: 58,
+        certificationDate: "2023-11-07",
+        reviewingOrganization: "Green Business Certification Inc.",
+        scorecardStatus: "Certification Awarded",
+        categories: [
+          {
+            category: "Location & Transportation",
+            achievedPoints: 10,
+            availablePoints: 16,
+            notes: "Walkable neighborhood with discounted transit passes for residents.",
+          },
+          {
+            category: "Sustainable Sites",
+            achievedPoints: 7,
+            availablePoints: 10,
+            notes: "Native landscaping and light pollution controls verified.",
+          },
+          {
+            category: "Water Efficiency",
+            achievedPoints: 6,
+            availablePoints: 11,
+            notes: "Submetering enables 28% irrigation water reduction.",
+          },
+          {
+            category: "Energy & Atmosphere",
+            achievedPoints: 20,
+            availablePoints: 33,
+            notes: "Geothermal-ready HVAC cut modeled EUI by 24% against baseline.",
+          },
+          {
+            category: "Materials & Resources",
+            achievedPoints: 5,
+            availablePoints: 13,
+            notes: "Waste diversion tracked for 68% of construction waste stream.",
+          },
+          {
+            category: "Indoor Environmental Quality",
+            achievedPoints: 8,
+            availablePoints: 16,
+            notes: "ERV retrofit improves ventilation effectiveness in common areas.",
+          },
+          {
+            category: "Innovation",
+            achievedPoints: 2,
+            availablePoints: 6,
+            notes: "Resident green ambassador program recognized for engagement.",
+          },
+          {
+            category: "Regional Priority",
+            achievedPoints: 0,
+            availablePoints: 4,
+            notes: "Regional stormwater priority pursued but not awarded.",
+          },
+        ],
+      },
     },
     investmentHistory: [],
     milestonePayoutHistory: []
@@ -201,7 +484,62 @@ const initialProjects: ProjectDictionary = {
       annualCO2Reduction: 142,
       energySavings: 35,
       jobsCreated: 15,
-      leedCertification: "LEED Platinum Pending"
+      leedCertification: "LEED Platinum Pending",
+      leedScorecard: {
+        certificationLevel: "LEED v4 BD+C: Core & Shell",
+        totalPoints: 85,
+        scorecardStatus: "Design Review Approved – Construction Review Pending",
+        categories: [
+          {
+            category: "Location & Transportation",
+            achievedPoints: 13,
+            availablePoints: 16,
+            notes: "Transit-oriented development with EV-ready parking projected.",
+          },
+          {
+            category: "Sustainable Sites",
+            achievedPoints: 9,
+            availablePoints: 10,
+            notes: "Green roofs and adaptive reuse of historic facade detailed in plans.",
+          },
+          {
+            category: "Water Efficiency",
+            achievedPoints: 9,
+            availablePoints: 11,
+            notes: "Rainwater harvesting and greywater reuse model a 42% reduction.",
+          },
+          {
+            category: "Energy & Atmosphere",
+            achievedPoints: 28,
+            availablePoints: 33,
+            notes: "Targeting 38% modeled energy cost savings via geothermal and heat recovery.",
+          },
+          {
+            category: "Materials & Resources",
+            achievedPoints: 8,
+            availablePoints: 13,
+            notes: "Adaptive reuse credits combined with EPD-backed finish selections.",
+          },
+          {
+            category: "Indoor Environmental Quality",
+            achievedPoints: 12,
+            availablePoints: 16,
+            notes: "Daylighting analysis meets 75% regularly occupied space threshold.",
+          },
+          {
+            category: "Innovation",
+            achievedPoints: 4,
+            availablePoints: 6,
+            notes: "Biophilic design pattern guide submitted for exemplary performance.",
+          },
+          {
+            category: "Regional Priority",
+            achievedPoints: 4,
+            availablePoints: 4,
+            notes: "Historic preservation and energy grid resiliency both prioritized regionally.",
+          },
+        ],
+      },
     },
     investmentHistory: [],
     milestonePayoutHistory: []
@@ -224,7 +562,14 @@ export const loadProjects = (): ProjectDictionary => {
             ...initialProject,
             ...savedProject,
             milestones: normalizeMilestones(savedProject.milestones || initialProject.milestones),
-            impactMetrics: savedProject.impactMetrics || initialProject.impactMetrics,
+            impactMetrics: {
+              ...(initialProject?.impactMetrics || {}),
+              ...(savedProject.impactMetrics || {}),
+              leedScorecard: mergeLeedScorecard(
+                initialProject?.impactMetrics?.leedScorecard,
+                savedProject.impactMetrics?.leedScorecard
+              ),
+            },
             investmentHistory: savedProject.investmentHistory || initialProject.investmentHistory || [],
             milestonePayoutHistory: savedProject.milestonePayoutHistory || initialProject.milestonePayoutHistory || [],
           });
@@ -234,6 +579,16 @@ export const loadProjects = (): ProjectDictionary => {
             acc[numericKey] = withProjectDefaults({
               ...fallbackProject,
               milestones: normalizeMilestones(fallbackProject.milestones),
+              impactMetrics: fallbackProject.impactMetrics
+                ? {
+                    ...(initialProject?.impactMetrics || {}),
+                    ...(fallbackProject.impactMetrics || {}),
+                    leedScorecard: mergeLeedScorecard(
+                      initialProject?.impactMetrics?.leedScorecard,
+                      fallbackProject.impactMetrics?.leedScorecard
+                    ),
+                  }
+                : fallbackProject.impactMetrics,
             });
           }
         }
@@ -354,6 +709,27 @@ export const updateMilestone = (
           ...(project.milestonePayoutHistory || []),
           payout,
         ];
+
+        if (project.impactMetrics?.leedScorecard && milestone.leedPointContributions?.length) {
+          const scorecard = project.impactMetrics.leedScorecard;
+          const awardedAt = milestone.verifiedAt || new Date().toISOString();
+          const filteredHistory = (scorecard.history || []).filter(
+            (entry) => entry.milestoneId !== milestone.id
+          );
+          const newEntries = milestone.leedPointContributions.map((contribution) => ({
+            milestoneId: milestone.id,
+            milestoneName: milestone.name,
+            category: contribution.category,
+            pointsAwarded: contribution.points,
+            awardedAt,
+            note: contribution.note,
+          }));
+
+          project.impactMetrics.leedScorecard = recalculateLeedScorecard({
+            ...scorecard,
+            history: [...filteredHistory, ...newEntries],
+          });
+        }
       } else if (wasVerified && !milestone.verified) {
         const currentBalance = parseFloat(project.projectWalletBalance || '0');
         const milestoneAmount = parseFloat(milestone.amount || '0');
@@ -365,6 +741,14 @@ export const updateMilestone = (
           project.milestonePayoutHistory = project.milestonePayoutHistory.filter(
             (entry) => entry.milestoneId !== milestone.id
           );
+        }
+
+        if (project.impactMetrics?.leedScorecard && milestone.leedPointContributions?.length) {
+          const scorecard = project.impactMetrics.leedScorecard;
+          project.impactMetrics.leedScorecard = recalculateLeedScorecard({
+            ...scorecard,
+            history: (scorecard.history || []).filter((entry) => entry.milestoneId !== milestone.id),
+          });
         }
       }
 
