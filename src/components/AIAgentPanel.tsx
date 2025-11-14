@@ -211,7 +211,11 @@ export default function AIAgentPanel({ project }: AIAgentPanelProps) {
   };
 
   return (
-    <section className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-green-100">
+    <section
+      className="fixed bottom-4 right-4 left-4 md:left-auto md:right-6 md:bottom-6 md:w-96 z-40 bg-white rounded-xl shadow-2xl p-6 border border-green-100"
+      role="complementary"
+      aria-label="RetroFit Insight Agent"
+    >
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">RetroFit Insight Agent</h2>
