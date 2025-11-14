@@ -28,11 +28,28 @@ export interface MilestonePayoutTransaction {
   date: string;
 }
 
+export interface LeedScoreCategory {
+  category: string;
+  achievedPoints: number;
+  availablePoints: number;
+  notes?: string;
+}
+
+export interface LeedScorecard {
+  certificationLevel: string;
+  totalPoints: number;
+  certificationDate?: string;
+  reviewingOrganization?: string;
+  scorecardStatus?: string;
+  categories: LeedScoreCategory[];
+}
+
 export interface ImpactMetrics {
   annualCO2Reduction: number; // tons of CO₂ avoided annually
   energySavings: number; // percentage improvement in efficiency
   jobsCreated: number; // number of local jobs supported
   leedCertification: string;
+  leedScorecard?: LeedScorecard;
 }
 
 export interface Project {
@@ -124,7 +141,64 @@ const initialProjects: ProjectDictionary = {
       annualCO2Reduction: 128,
       energySavings: 32,
       jobsCreated: 18,
-      leedCertification: "LEED Gold"
+      leedCertification: "LEED Gold",
+      leedScorecard: {
+        certificationLevel: "LEED v4 BD+C: Major Renovation",
+        totalPoints: 79,
+        certificationDate: "2024-03-18",
+        reviewingOrganization: "U.S. Green Building Council",
+        scorecardStatus: "Certification Awarded",
+        categories: [
+          {
+            category: "Location & Transportation",
+            achievedPoints: 12,
+            availablePoints: 16,
+            notes: "Transit access, reduced parking footprint, and bike facilities.",
+          },
+          {
+            category: "Sustainable Sites",
+            achievedPoints: 8,
+            availablePoints: 10,
+            notes: "High-performance roof and rainwater management installed.",
+          },
+          {
+            category: "Water Efficiency",
+            achievedPoints: 7,
+            availablePoints: 11,
+            notes: "Fixture upgrades deliver a 36% indoor water use reduction.",
+          },
+          {
+            category: "Energy & Atmosphere",
+            achievedPoints: 26,
+            availablePoints: 33,
+            notes: "Solar array and controls drive a 28% modeled energy cost savings.",
+          },
+          {
+            category: "Materials & Resources",
+            achievedPoints: 6,
+            availablePoints: 13,
+            notes: "Reused existing envelope and tracked EPD-backed materials.",
+          },
+          {
+            category: "Indoor Environmental Quality",
+            achievedPoints: 11,
+            availablePoints: 16,
+            notes: "Daylight sensors and low-VOC finishes improve occupant comfort.",
+          },
+          {
+            category: "Innovation",
+            achievedPoints: 5,
+            availablePoints: 6,
+            notes: "Green cleaning program and education dashboard earn innovation credits.",
+          },
+          {
+            category: "Regional Priority",
+            achievedPoints: 4,
+            availablePoints: 4,
+            notes: "Heat island mitigation aligns with NYSERDA regional priorities.",
+          },
+        ],
+      },
     },
     investmentHistory: [],
     milestonePayoutHistory: []
@@ -175,7 +249,64 @@ const initialProjects: ProjectDictionary = {
       annualCO2Reduction: 94,
       energySavings: 27,
       jobsCreated: 22,
-      leedCertification: "LEED Silver"
+      leedCertification: "LEED Silver",
+      leedScorecard: {
+        certificationLevel: "LEED v4.1 O+M: Multifamily",
+        totalPoints: 58,
+        certificationDate: "2023-11-07",
+        reviewingOrganization: "Green Business Certification Inc.",
+        scorecardStatus: "Certification Awarded",
+        categories: [
+          {
+            category: "Location & Transportation",
+            achievedPoints: 10,
+            availablePoints: 16,
+            notes: "Walkable neighborhood with discounted transit passes for residents.",
+          },
+          {
+            category: "Sustainable Sites",
+            achievedPoints: 7,
+            availablePoints: 10,
+            notes: "Native landscaping and light pollution controls verified.",
+          },
+          {
+            category: "Water Efficiency",
+            achievedPoints: 6,
+            availablePoints: 11,
+            notes: "Submetering enables 28% irrigation water reduction.",
+          },
+          {
+            category: "Energy & Atmosphere",
+            achievedPoints: 20,
+            availablePoints: 33,
+            notes: "Geothermal-ready HVAC cut modeled EUI by 24% against baseline.",
+          },
+          {
+            category: "Materials & Resources",
+            achievedPoints: 5,
+            availablePoints: 13,
+            notes: "Waste diversion tracked for 68% of construction waste stream.",
+          },
+          {
+            category: "Indoor Environmental Quality",
+            achievedPoints: 8,
+            availablePoints: 16,
+            notes: "ERV retrofit improves ventilation effectiveness in common areas.",
+          },
+          {
+            category: "Innovation",
+            achievedPoints: 2,
+            availablePoints: 6,
+            notes: "Resident green ambassador program recognized for engagement.",
+          },
+          {
+            category: "Regional Priority",
+            achievedPoints: 0,
+            availablePoints: 4,
+            notes: "Regional stormwater priority pursued but not awarded.",
+          },
+        ],
+      },
     },
     investmentHistory: [],
     milestonePayoutHistory: []
@@ -201,7 +332,62 @@ const initialProjects: ProjectDictionary = {
       annualCO2Reduction: 142,
       energySavings: 35,
       jobsCreated: 15,
-      leedCertification: "LEED Platinum Pending"
+      leedCertification: "LEED Platinum Pending",
+      leedScorecard: {
+        certificationLevel: "LEED v4 BD+C: Core & Shell",
+        totalPoints: 85,
+        scorecardStatus: "Design Review Approved – Construction Review Pending",
+        categories: [
+          {
+            category: "Location & Transportation",
+            achievedPoints: 13,
+            availablePoints: 16,
+            notes: "Transit-oriented development with EV-ready parking projected.",
+          },
+          {
+            category: "Sustainable Sites",
+            achievedPoints: 9,
+            availablePoints: 10,
+            notes: "Green roofs and adaptive reuse of historic facade detailed in plans.",
+          },
+          {
+            category: "Water Efficiency",
+            achievedPoints: 9,
+            availablePoints: 11,
+            notes: "Rainwater harvesting and greywater reuse model a 42% reduction.",
+          },
+          {
+            category: "Energy & Atmosphere",
+            achievedPoints: 28,
+            availablePoints: 33,
+            notes: "Targeting 38% modeled energy cost savings via geothermal and heat recovery.",
+          },
+          {
+            category: "Materials & Resources",
+            achievedPoints: 8,
+            availablePoints: 13,
+            notes: "Adaptive reuse credits combined with EPD-backed finish selections.",
+          },
+          {
+            category: "Indoor Environmental Quality",
+            achievedPoints: 12,
+            availablePoints: 16,
+            notes: "Daylighting analysis meets 75% regularly occupied space threshold.",
+          },
+          {
+            category: "Innovation",
+            achievedPoints: 4,
+            availablePoints: 6,
+            notes: "Biophilic design pattern guide submitted for exemplary performance.",
+          },
+          {
+            category: "Regional Priority",
+            achievedPoints: 4,
+            availablePoints: 4,
+            notes: "Historic preservation and energy grid resiliency both prioritized regionally.",
+          },
+        ],
+      },
     },
     investmentHistory: [],
     milestonePayoutHistory: []
@@ -224,7 +410,10 @@ export const loadProjects = (): ProjectDictionary => {
             ...initialProject,
             ...savedProject,
             milestones: normalizeMilestones(savedProject.milestones || initialProject.milestones),
-            impactMetrics: savedProject.impactMetrics || initialProject.impactMetrics,
+            impactMetrics: {
+              ...(initialProject?.impactMetrics || {}),
+              ...(savedProject.impactMetrics || {}),
+            },
             investmentHistory: savedProject.investmentHistory || initialProject.investmentHistory || [],
             milestonePayoutHistory: savedProject.milestonePayoutHistory || initialProject.milestonePayoutHistory || [],
           });
@@ -234,6 +423,10 @@ export const loadProjects = (): ProjectDictionary => {
             acc[numericKey] = withProjectDefaults({
               ...fallbackProject,
               milestones: normalizeMilestones(fallbackProject.milestones),
+              impactMetrics: {
+                ...(initialProject?.impactMetrics || {}),
+                ...(fallbackProject.impactMetrics || {}),
+              },
             });
           }
         }
