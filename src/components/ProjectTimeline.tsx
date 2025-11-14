@@ -163,9 +163,7 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
 
     const minTime = events.reduce((min, event) => Math.min(min, event.date.getTime()), Number.POSITIVE_INFINITY);
     const maxTime = events.reduce((max, event) => Math.max(max, event.date.getTime()), Number.NEGATIVE_INFINITY);
-    const paddedMin = minTime - 12 * 60 * 60 * 1000;
-    const paddedMax = maxTime + 12 * 60 * 60 * 1000;
-    const timeRange = Math.max(1, paddedMax - paddedMin);
+    const timeRange = Math.max(1, maxTime - minTime);
 
     const maxPoints = events.reduce((max, event) => {
       const candidate =
@@ -182,7 +180,7 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
       const yValue = yAxisMode === 'cumulative' ? event.cumulativePoints : event.pointsDelta;
       const x =
         padding.left +
-        ((event.date.getTime() - paddedMin) / timeRange) * innerWidth;
+        ((event.date.getTime() - minTime) / timeRange) * innerWidth;
       const y =
         chartHeight -
         padding.bottom -
@@ -200,22 +198,28 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
       .map((event, index) => `${index === 0 ? 'M' : 'L'}${event.x},${event.y}`)
       .join(' ');
 
-    const tickCount = Math.min(4, Math.max(2, eventsWithPosition.length));
+    const tickCount = Math.min(5, Math.max(2, eventsWithPosition.length));
     const xTicks: { x: number; label: string }[] = [];
     if (tickCount > 0) {
-      const step = eventsWithPosition.length === 1 ? 0 : (eventsWithPosition.length - 1) / (tickCount - 1);
       for (let index = 0; index < tickCount; index += 1) {
-        const targetIndex = Math.min(
-          eventsWithPosition.length - 1,
-          Math.round(index * step)
-        );
-        const event = eventsWithPosition[targetIndex];
+        const ratio = tickCount === 1 ? 0 : index / (tickCount - 1);
+        const tickTime = minTime + ratio * (maxTime - minTime);
+        const tickDate = new Date(tickTime);
+        const diffMs = tickTime - minTime;
+        const totalMinutes = Math.max(0, Math.round(diffMs / (1000 * 60)));
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        const relativeLabel = `${hours}:${minutes.toString().padStart(2, '0')}`;
+        const absoluteLabel = tickDate.toLocaleString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+
         xTicks.push({
-          x: event.x,
-          label: event.date.toLocaleDateString(undefined, {
-            month: 'short',
-            day: 'numeric',
-          }),
+          x: padding.left + ratio * innerWidth,
+          label: `${relativeLabel} • ${absoluteLabel}`,
         });
       }
     }
