@@ -1,5 +1,10 @@
 // src/data/projectState.ts
 
+export interface LeedPointAward {
+  category: string;
+  points: number;
+}
+
 export interface Milestone {
   id: number;
   name: string;
@@ -11,6 +16,8 @@ export interface Milestone {
   verifiedAt?: string | null;
   proofHash: string;
   documents: string[];
+  leedPointContributions?: LeedPointAward[];
+  leedHistoryId?: string | null;
 }
 
 export interface InvestmentTransaction {
@@ -35,6 +42,15 @@ export interface LeedScoreCategory {
   notes?: string;
 }
 
+export interface LeedScorecardMilestoneHistoryEntry {
+  id: string;
+  milestoneId: number;
+  milestoneName: string;
+  verifiedAt: string;
+  awards: LeedPointAward[];
+  totalPointsAwarded: number;
+}
+
 export interface LeedScorecard {
   certificationLevel: string;
   totalPoints: number;
@@ -42,6 +58,7 @@ export interface LeedScorecard {
   reviewingOrganization?: string;
   scorecardStatus?: string;
   categories: LeedScoreCategory[];
+  milestoneHistory?: LeedScorecardMilestoneHistoryEntry[];
 }
 
 export interface ImpactMetrics {
@@ -83,12 +100,46 @@ const normalizeMilestones = (milestones: Milestone[] = []): Milestone[] =>
     documents: milestone.documents || [],
     completedAt: milestone.completedAt ?? null,
     verifiedAt: milestone.verifiedAt ?? null,
+    leedPointContributions: milestone.leedPointContributions || [],
+    leedHistoryId: milestone.leedHistoryId ?? null,
   }));
+
+const normalizeScorecard = (scorecard?: LeedScorecard | null): LeedScorecard | undefined => {
+  if (!scorecard) {
+    return scorecard ?? undefined;
+  }
+
+  const normalizedHistory = (scorecard.milestoneHistory || []).map((entry) => {
+    const awards = (entry.awards || []).map((award) => ({ ...award }));
+    const totalPointsAwarded =
+      entry.totalPointsAwarded !== undefined
+        ? entry.totalPointsAwarded
+        : awards.reduce((sum, award) => sum + (award.points || 0), 0);
+
+    return {
+      ...entry,
+      awards,
+      totalPointsAwarded,
+    };
+  });
+
+  return {
+    ...scorecard,
+    categories: (scorecard.categories || []).map((category) => ({ ...category })),
+    milestoneHistory: normalizedHistory,
+  };
+};
 
 const withProjectDefaults = (project: Project): Project => ({
   ...project,
   projectWalletBalance: project.projectWalletBalance || '0',
   milestones: normalizeMilestones(project.milestones || []),
+  impactMetrics: project.impactMetrics
+    ? {
+        ...project.impactMetrics,
+        leedScorecard: normalizeScorecard(project.impactMetrics.leedScorecard),
+      }
+    : project.impactMetrics,
   investmentHistory: project.investmentHistory || [],
   milestonePayoutHistory: project.milestonePayoutHistory || [],
 });
@@ -122,7 +173,12 @@ const initialProjects: ProjectDictionary = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 4 },
+          { category: "Innovation", points: 1 },
+        ],
+        leedHistoryId: null
       },
       {
         id: 2,
@@ -134,7 +190,12 @@ const initialProjects: ProjectDictionary = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 3 },
+          { category: "Indoor Environmental Quality", points: 2 },
+        ],
+        leedHistoryId: null
       }
     ]),
     impactMetrics: {
@@ -198,6 +259,7 @@ const initialProjects: ProjectDictionary = {
             notes: "Heat island mitigation aligns with NYSERDA regional priorities.",
           },
         ],
+        milestoneHistory: [],
       },
     },
     investmentHistory: [],
@@ -230,7 +292,12 @@ const initialProjects: ProjectDictionary = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 5 },
+          { category: "Indoor Environmental Quality", points: 2 },
+        ],
+        leedHistoryId: null
       },
       {
         id: 2,
@@ -242,7 +309,12 @@ const initialProjects: ProjectDictionary = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 3 },
+          { category: "Water Efficiency", points: 2 },
+        ],
+        leedHistoryId: null
       }
     ]),
     impactMetrics: {
@@ -306,6 +378,7 @@ const initialProjects: ProjectDictionary = {
             notes: "Regional stormwater priority pursued but not awarded.",
           },
         ],
+        milestoneHistory: [],
       },
     },
     investmentHistory: [],
@@ -387,6 +460,7 @@ const initialProjects: ProjectDictionary = {
             notes: "Historic preservation and energy grid resiliency both prioritized regionally.",
           },
         ],
+        milestoneHistory: [],
       },
     },
     investmentHistory: [],
@@ -406,27 +480,45 @@ export const loadProjects = (): ProjectDictionary => {
         const initialProject = initialProjects[numericKey];
         const savedProject = parsed[numericKey];
         if (initialProject && savedProject) {
+          const initialImpactMetrics = initialProject.impactMetrics;
+          const savedImpactMetrics = savedProject.impactMetrics;
+          const mergedImpactMetrics = initialImpactMetrics || savedImpactMetrics
+            ? {
+                ...(initialImpactMetrics || {}),
+                ...(savedImpactMetrics || {}),
+                leedScorecard: normalizeScorecard(
+                  savedImpactMetrics?.leedScorecard || initialImpactMetrics?.leedScorecard
+                ),
+              }
+            : undefined;
+
           acc[numericKey] = withProjectDefaults({
             ...initialProject,
             ...savedProject,
             milestones: normalizeMilestones(savedProject.milestones || initialProject.milestones),
-            impactMetrics: {
-              ...(initialProject?.impactMetrics || {}),
-              ...(savedProject.impactMetrics || {}),
-            },
+            impactMetrics: (mergedImpactMetrics || initialImpactMetrics || savedImpactMetrics) as ImpactMetrics,
             investmentHistory: savedProject.investmentHistory || initialProject.investmentHistory || [],
             milestonePayoutHistory: savedProject.milestonePayoutHistory || initialProject.milestonePayoutHistory || [],
           });
         } else {
           const fallbackProject = savedProject || initialProject;
           if (fallbackProject) {
+            const fallbackImpactMetrics = fallbackProject.impactMetrics;
+            const initialImpactMetrics = initialProject?.impactMetrics;
+            const mergedFallbackImpact = fallbackImpactMetrics || initialImpactMetrics
+              ? {
+                  ...(initialImpactMetrics || {}),
+                  ...(fallbackImpactMetrics || {}),
+                  leedScorecard: normalizeScorecard(
+                    fallbackImpactMetrics?.leedScorecard || initialImpactMetrics?.leedScorecard
+                  ),
+                }
+              : undefined;
+
             acc[numericKey] = withProjectDefaults({
               ...fallbackProject,
               milestones: normalizeMilestones(fallbackProject.milestones),
-              impactMetrics: {
-                ...(initialProject?.impactMetrics || {}),
-                ...(fallbackProject.impactMetrics || {}),
-              },
+              impactMetrics: (mergedFallbackImpact || fallbackImpactMetrics || initialImpactMetrics) as ImpactMetrics,
             });
           }
         }
@@ -528,6 +620,101 @@ export const updateMilestone = (
       }
 
       Object.assign(milestone, updatesWithTimestamps);
+
+      const scorecard = project.impactMetrics?.leedScorecard;
+      const contributions = milestone.leedPointContributions || [];
+      if (scorecard && !scorecard.milestoneHistory) {
+        scorecard.milestoneHistory = [];
+      }
+
+      if (scorecard && contributions.length > 0) {
+        if (!wasVerified && milestone.verified) {
+          const awards: LeedPointAward[] = [];
+
+          contributions.forEach(({ category, points }) => {
+            if (!category) return;
+            const targetCategory = scorecard.categories.find((entry) => entry.category === category);
+            const safePoints = Number.isFinite(points) ? points : 0;
+
+            if (targetCategory) {
+              const before = Number.isFinite(targetCategory.achievedPoints)
+                ? targetCategory.achievedPoints
+                : 0;
+              const cap = Number.isFinite(targetCategory.availablePoints) ? targetCategory.availablePoints : 0;
+              const possibleGain = Math.max(0, Math.min(safePoints, cap - before));
+              if (possibleGain > 0) {
+                targetCategory.achievedPoints = before + possibleGain;
+                awards.push({ category, points: possibleGain });
+              }
+            } else if (safePoints > 0) {
+              scorecard.categories.push({
+                category,
+                achievedPoints: safePoints,
+                availablePoints: safePoints,
+                notes: 'Added via milestone verification',
+              });
+              awards.push({ category, points: safePoints });
+            }
+          });
+
+          const totalAwarded = awards.reduce((sum, award) => sum + award.points, 0);
+          if (totalAwarded > 0) {
+            scorecard.totalPoints = Math.max(0, (scorecard.totalPoints || 0) + totalAwarded);
+          }
+
+          const historyEntry: LeedScorecardMilestoneHistoryEntry = {
+            id: `${milestone.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            milestoneId: milestone.id,
+            milestoneName: milestone.name,
+            verifiedAt: milestone.verifiedAt || new Date().toISOString(),
+            awards,
+            totalPointsAwarded: totalAwarded,
+          };
+
+          scorecard.milestoneHistory = [...scorecard.milestoneHistory, historyEntry];
+          milestone.leedHistoryId = historyEntry.id;
+        } else if (wasVerified && !milestone.verified) {
+          const historyId = milestone.leedHistoryId;
+          let entryToRemoveIndex = -1;
+
+          if (historyId) {
+            entryToRemoveIndex = scorecard.milestoneHistory?.findIndex((entry) => entry.id === historyId) ?? -1;
+          }
+
+          if (entryToRemoveIndex === -1 && scorecard.milestoneHistory) {
+            for (let i = scorecard.milestoneHistory.length - 1; i >= 0; i -= 1) {
+              if (scorecard.milestoneHistory[i].milestoneId === milestone.id) {
+                entryToRemoveIndex = i;
+                break;
+              }
+            }
+          }
+
+          if (entryToRemoveIndex >= 0 && scorecard.milestoneHistory) {
+            const [removedEntry] = scorecard.milestoneHistory.splice(entryToRemoveIndex, 1);
+
+            removedEntry.awards.forEach(({ category, points }) => {
+              if (points <= 0) return;
+              const targetCategory = scorecard.categories.find((entry) => entry.category === category);
+              if (targetCategory) {
+                const before = Number.isFinite(targetCategory.achievedPoints)
+                  ? targetCategory.achievedPoints
+                  : 0;
+                targetCategory.achievedPoints = Math.max(0, before - points);
+              }
+            });
+
+            if (removedEntry.totalPointsAwarded > 0) {
+              scorecard.totalPoints = Math.max(
+                0,
+                (scorecard.totalPoints || 0) - removedEntry.totalPointsAwarded
+              );
+            }
+          }
+
+          milestone.leedHistoryId = null;
+        }
+      }
 
       if (!wasVerified && milestone.verified) {
         const currentBalance = parseFloat(project.projectWalletBalance || '0');

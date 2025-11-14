@@ -45,6 +45,21 @@ export default function ImpactMetrics({ metrics }: ImpactMetricsProps) {
 
   const hasLeedScorecard = Boolean(metrics.leedScorecard && metrics.leedScorecard.categories?.length);
   const scorecard = metrics.leedScorecard;
+  const milestoneHistory = scorecard?.milestoneHistory || [];
+
+  const leedBadgeLabel =
+    hasLeedScorecard && typeof scorecard?.totalPoints === 'number'
+      ? `${metrics.leedCertification} • ${scorecard.totalPoints.toLocaleString()} pts`
+      : metrics.leedCertification;
+
+  const formatHistoryDate = (isoString?: string) => {
+    if (!isoString) return '—';
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) {
+      return '—';
+    }
+    return date.toLocaleString();
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
@@ -65,7 +80,7 @@ export default function ImpactMetrics({ metrics }: ImpactMetricsProps) {
           }`}
           aria-disabled={!hasLeedScorecard}
         >
-          {metrics.leedCertification}
+          {leedBadgeLabel}
           {hasLeedScorecard && <span className="ml-2 text-xs text-green-700 underline">View scorecard</span>}
         </button>
       </div>
@@ -170,6 +185,65 @@ export default function ImpactMetrics({ metrics }: ImpactMetricsProps) {
                   </tbody>
                 </table>
               </div>
+
+              {milestoneHistory.length > 0 && (
+                <div className="mt-8">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-3">Milestone Point History</h4>
+                  <div className="overflow-x-auto rounded-xl border border-gray-200">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            Verified On
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            Milestone
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            Category Gains
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            Points Added
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {milestoneHistory
+                          .slice()
+                          .reverse()
+                          .map((entry) => (
+                            <tr key={entry.id}>
+                              <td className="px-4 py-3 text-sm text-gray-700">{formatHistoryDate(entry.verifiedAt)}</td>
+                              <td className="px-4 py-3 text-sm text-gray-900 font-medium">{entry.milestoneName}</td>
+                              <td className="px-4 py-3 text-sm text-gray-700">
+                                {entry.awards && entry.awards.length > 0 ? (
+                                  <div className="space-y-1">
+                                    {entry.awards.map((award) => (
+                                      <div
+                                        key={`${entry.id}-${award.category}`}
+                                        className="flex items-center justify-between gap-4"
+                                      >
+                                        <span>{award.category}</span>
+                                        <span className="font-semibold text-green-700">+{award.points}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-500 italic">No additional points recorded</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-right font-semibold text-green-700">
+                                {entry.totalPointsAwarded > 0
+                                  ? `+${entry.totalPointsAwarded.toLocaleString()}`
+                                  : '0'}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-6 flex justify-end">
                 <button
