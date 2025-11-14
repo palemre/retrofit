@@ -9,6 +9,7 @@ import MilestoneCard from '@/components/MilestoneCard';
 import ImpactMetrics from '@/components/ImpactMetrics';
 import { useProjectData } from '@/hooks/useProjectData';
 import ProjectTimeline from '@/components/ProjectTimeline';
+import AIAgentPanel from '@/components/AIAgentPanel';
 
 export default function ProjectPage() {
   const params = useParams();
@@ -198,6 +199,8 @@ export default function ProjectPage() {
             </button>
           </div>
         </div>
+
+        <AIAgentPanel project={project} />
 
         {/* On-Chain Asset Overview */}
         <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
