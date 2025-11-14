@@ -602,20 +602,42 @@ export const updateMilestone = (
       const wasCompleted = milestone.completed;
 
       const updatesWithTimestamps: Partial<Milestone> = { ...updates };
+      const placeholderDocumentName = `Milestone_${milestone.id}_Proof_of_Work.pdf`;
+      const existingDocuments = Array.isArray(milestone.documents) ? milestone.documents : [];
+      const ensurePlaceholderDocument = (documents: string[]): string[] => {
+        const docSet = new Set(documents);
+        docSet.add(placeholderDocumentName);
+        return Array.from(docSet);
+      };
+      const generateProofHash = () => {
+        let hash = '0x';
+        for (let i = 0; i < 64; i += 1) {
+          hash += Math.floor(Math.random() * 16).toString(16);
+        }
+        return hash;
+      };
 
       if (updates.completed !== undefined) {
         if (updates.completed && !wasCompleted) {
           updatesWithTimestamps.completedAt = new Date().toISOString();
+          updatesWithTimestamps.documents = ensurePlaceholderDocument(existingDocuments);
         } else if (!updates.completed && wasCompleted) {
           updatesWithTimestamps.completedAt = null;
+          updatesWithTimestamps.documents = [];
+          updatesWithTimestamps.proofHash = '';
         }
       }
 
       if (updates.verified !== undefined) {
         if (updates.verified && !wasVerified) {
           updatesWithTimestamps.verifiedAt = new Date().toISOString();
+          const documentsToPersist = updatesWithTimestamps.documents ?? existingDocuments;
+          updatesWithTimestamps.documents = ensurePlaceholderDocument(documentsToPersist);
+          const currentHash = milestone.proofHash && milestone.proofHash.trim().length > 0 ? milestone.proofHash : '';
+          updatesWithTimestamps.proofHash = currentHash || generateProofHash();
         } else if (!updates.verified && wasVerified) {
           updatesWithTimestamps.verifiedAt = null;
+          updatesWithTimestamps.proofHash = '';
         }
       }
 
