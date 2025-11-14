@@ -295,6 +295,7 @@ export default function ProjectPage() {
         <ProjectTimeline
           milestones={project.milestones}
           scorecard={project.impactMetrics?.leedScorecard}
+          payoutHistory={project.milestonePayoutHistory}
           onSelectMilestone={(milestoneId) => setActiveMilestoneId(milestoneId)}
         />
 
