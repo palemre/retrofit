@@ -8,6 +8,7 @@ import InvestModal from '@/components/InvestModal';
 import MilestoneCard from '@/components/MilestoneCard';
 import ImpactMetrics from '@/components/ImpactMetrics';
 import { useProjectData } from '@/hooks/useProjectData';
+import ProjectTimeline from '@/components/ProjectTimeline';
 
 export default function ProjectPage() {
   const params = useParams();
@@ -15,6 +16,7 @@ export default function ProjectPage() {
   const { project, loading, updateProjectInvestment, refreshProject, resetFunding } = useProjectData(projectId);
   const [isInvestModalOpen, setIsInvestModalOpen] = useState(false);
   const [isResettingFunding, setIsResettingFunding] = useState(false);
+  const [activeMilestoneId, setActiveMilestoneId] = useState<number | null>(null);
 
   const formatDateTime = useMemo(
     () =>
@@ -289,6 +291,13 @@ export default function ProjectPage() {
           <ImpactMetrics metrics={project.impactMetrics} />
         )}
 
+        {/* Project Timeline */}
+        <ProjectTimeline
+          milestones={project.milestones}
+          scorecard={project.impactMetrics?.leedScorecard}
+          onSelectMilestone={(milestoneId) => setActiveMilestoneId(milestoneId)}
+        />
+
         {/* Milestones Section */}
         <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Project Milestones</h2>
@@ -300,6 +309,8 @@ export default function ProjectPage() {
                   milestone={milestone}
                   projectId={project.id}
                   onMilestoneUpdate={refreshProject}
+                  isModalOpen={activeMilestoneId === milestone.id}
+                  onModalToggle={(isOpen) => setActiveMilestoneId(isOpen ? milestone.id : null)}
                 />
               ))
             ) : (
