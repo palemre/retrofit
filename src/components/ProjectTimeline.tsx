@@ -2,12 +2,17 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { LeedScorecard, Milestone } from '@/data/projectState';
+import type {
+  LeedScorecard,
+  Milestone,
+  MilestonePayoutTransaction,
+} from '@/data/projectState';
 
 interface ProjectTimelineProps {
   milestones?: Milestone[];
   scorecard?: LeedScorecard;
   onSelectMilestone?: (milestoneId: number) => void;
+  payoutHistory?: MilestonePayoutTransaction[];
 }
 
 type TimelineEventType = 'completed' | 'verified';
@@ -21,6 +26,8 @@ interface TimelineEvent {
   date: Date;
   cumulativePoints: number;
   pointsDelta: number;
+  cumulativeFunds: number;
+  fundsDelta: number;
   x: number;
   y: number;
   tooltipDate: string;
@@ -52,13 +59,53 @@ const getPointsDeltaFromHistory = (entryPoints: number, awards?: { points?: numb
   }, 0);
 };
 
-export default function ProjectTimeline({ milestones = [], scorecard, onSelectMilestone }: ProjectTimelineProps) {
-  const [yAxisMode, setYAxisMode] = useState<'cumulative' | 'individual'>('cumulative');
+const parseAmount = (amount?: string | null) => {
+  if (!amount) return 0;
+  const parsed = parseFloat(amount);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+interface NormalizedPayout extends MilestonePayoutTransaction {
+  parsedAmount: number;
+  parsedDate: Date | null;
+  used?: boolean;
+}
+
+export default function ProjectTimeline({
+  milestones = [],
+  scorecard,
+  onSelectMilestone,
+  payoutHistory = [],
+}: ProjectTimelineProps) {
+  const [metric, setMetric] = useState<'funds' | 'points'>('funds');
+  const [valueMode, setValueMode] = useState<'cumulative' | 'individual'>('cumulative');
   const [eventFilter, setEventFilter] = useState<'all' | 'verified'>('all');
 
   const timeline = useMemo(() => {
     const events: TimelineEvent[] = [];
     const verifiedEvents: TimelineEvent[] = [];
+
+    const payoutMap = new Map<number, NormalizedPayout[]>();
+    payoutHistory.forEach((entry) => {
+      const parsedDate = entry.date ? new Date(entry.date) : null;
+      if (parsedDate && Number.isNaN(parsedDate.getTime())) {
+        payoutMap.set(entry.milestoneId, [
+          ...(payoutMap.get(entry.milestoneId) || []),
+          { ...entry, parsedDate: null, parsedAmount: parseAmount(entry.amount) },
+        ]);
+        return;
+      }
+
+      payoutMap.set(entry.milestoneId, [
+        ...(payoutMap.get(entry.milestoneId) || []),
+        { ...entry, parsedDate, parsedAmount: parseAmount(entry.amount) },
+      ]);
+    });
+
+    const milestoneAmounts = new Map<number, number>();
+    milestones.forEach((milestone) => {
+      milestoneAmounts.set(milestone.id, parseAmount(milestone.amount));
+    });
 
     const historyEntries = (scorecard?.milestoneHistory || [])
       .map((entry) => {
@@ -82,19 +129,118 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
       .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
       .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    let runningTotal = 0;
+    const findPayoutForEvent = (milestoneId: number, isoDate: string, date: Date) => {
+      const entries = payoutMap.get(milestoneId);
+      if (!entries || entries.length === 0) {
+        return null;
+      }
+
+      let candidate = entries.find((entry) => !entry.used && entry.date === isoDate);
+      if (!candidate && date) {
+        candidate = entries.find((entry) => {
+          if (entry.used || !entry.parsedDate) return false;
+          return entry.parsedDate.getTime() === date.getTime();
+        });
+      }
+
+      if (!candidate) {
+        candidate = entries.find((entry) => !entry.used);
+      }
+
+      if (candidate) {
+        candidate.used = true;
+        return candidate;
+      }
+      return null;
+    };
+
+    type VerificationCandidate = {
+      id: string;
+      milestoneId: number;
+      milestoneName: string;
+      isoDate: string;
+      date: Date;
+      pointsDelta: number;
+      fundsDelta: number;
+    };
+
+    const verificationCandidates: VerificationCandidate[] = [];
+
     historyEntries.forEach((entry) => {
-      runningTotal += entry.pointsDelta;
-      const tooltipDate = entry.date.toLocaleString();
-      verifiedEvents.push({
+      const payout = findPayoutForEvent(entry.milestoneId, entry.isoDate, entry.date);
+      const fundsDelta = payout ? payout.parsedAmount : milestoneAmounts.get(entry.milestoneId) || 0;
+      verificationCandidates.push({
         id: `verified-${entry.id}`,
-        type: 'verified',
         milestoneId: entry.milestoneId,
         milestoneName: entry.milestoneName,
         isoDate: entry.isoDate,
         date: entry.date,
-        cumulativePoints: runningTotal,
         pointsDelta: entry.pointsDelta,
+        fundsDelta,
+      });
+    });
+
+    milestones.forEach((milestone) => {
+      if (!milestone.verified || !milestone.verifiedAt) {
+        return;
+      }
+
+      const isoDate = milestone.verifiedAt;
+      const date = new Date(isoDate);
+      if (Number.isNaN(date.getTime())) {
+        return;
+      }
+
+      const alreadyTracked = verificationCandidates.some((candidate) => {
+        if (candidate.milestoneId !== milestone.id) return false;
+        return Math.abs(candidate.date.getTime() - date.getTime()) < 1000;
+      });
+
+      if (alreadyTracked) {
+        return;
+      }
+
+      const payout = findPayoutForEvent(milestone.id, isoDate, date);
+      const fundsDelta = payout ? payout.parsedAmount : milestoneAmounts.get(milestone.id) || 0;
+
+      verificationCandidates.push({
+        id: `verified-fallback-${milestone.id}-${isoDate}`,
+        milestoneId: milestone.id,
+        milestoneName: milestone.name,
+        isoDate,
+        date,
+        pointsDelta: 0,
+        fundsDelta,
+      });
+    });
+
+    verificationCandidates.sort((a, b) => {
+      const dateDiff = a.date.getTime() - b.date.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      if (a.milestoneId !== b.milestoneId) {
+        return a.milestoneId - b.milestoneId;
+      }
+      return a.id.localeCompare(b.id);
+    });
+
+    let runningPointsTotal = 0;
+    let runningFundsTotal = 0;
+    verificationCandidates.forEach((candidate) => {
+      runningPointsTotal += candidate.pointsDelta;
+      runningFundsTotal += candidate.fundsDelta;
+
+      const tooltipDate = candidate.date.toLocaleString();
+      verifiedEvents.push({
+        id: candidate.id,
+        type: 'verified',
+        milestoneId: candidate.milestoneId,
+        milestoneName: candidate.milestoneName,
+        isoDate: candidate.isoDate,
+        date: candidate.date,
+        cumulativePoints: runningPointsTotal,
+        pointsDelta: candidate.pointsDelta,
+        cumulativeFunds: runningFundsTotal,
+        fundsDelta: candidate.fundsDelta,
         x: 0,
         y: 0,
         tooltipDate,
@@ -114,6 +260,19 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
       return value;
     };
 
+    const getCumulativeFundsBefore = (targetDate: Date) => {
+      let value = 0;
+      for (let index = 0; index < verifiedEvents.length; index += 1) {
+        const event = verifiedEvents[index];
+        if (event.date.getTime() <= targetDate.getTime()) {
+          value = event.cumulativeFunds;
+        } else {
+          break;
+        }
+      }
+      return value;
+    };
+
     milestones.forEach((milestone) => {
       const isoDate = milestone.completedAt;
       if (!isoDate) return;
@@ -124,6 +283,7 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
 
       const tooltipDate = date.toLocaleString();
       const cumulativePoints = getCumulativePointsBefore(date);
+      const cumulativeFunds = getCumulativeFundsBefore(date);
 
       events.push({
         id: `completed-${milestone.id}-${isoDate}`,
@@ -134,6 +294,8 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
         date,
         cumulativePoints,
         pointsDelta: 0,
+        cumulativeFunds,
+        fundsDelta: 0,
         x: 0,
         y: 0,
         tooltipDate,
@@ -142,16 +304,24 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
 
     events.push(...verifiedEvents);
 
+    const computeYAxisLabel = () => {
+      if (metric === 'funds') {
+        return valueMode === 'cumulative'
+          ? 'Cumulative Released Funds (USD)'
+          : 'Released Funds per Milestone (USD)';
+      }
+      return valueMode === 'cumulative'
+        ? 'Cumulative LEED Points'
+        : 'LEED Points Earned per Milestone';
+    };
+
     if (events.length === 0) {
       return {
         events: [] as TimelineEvent[],
         linePath: '',
         xTicks: [] as { x: number; label: string }[],
         yTicks: [] as number[],
-        yAxisLabel:
-          yAxisMode === 'cumulative'
-            ? 'Cumulative LEED Points'
-            : 'LEED Points Earned per Milestone',
+        yAxisLabel: computeYAxisLabel(),
       };
     }
 
@@ -166,26 +336,35 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
     const maxTime = events.reduce((max, event) => Math.max(max, event.date.getTime()), Number.NEGATIVE_INFINITY);
     const timeRange = Math.max(1, maxTime - minTime);
 
-    const maxPoints = events.reduce((max, event) => {
-      const candidate =
-        yAxisMode === 'cumulative' ? event.cumulativePoints : event.pointsDelta;
+    const maxValue = events.reduce((max, event) => {
+      const candidate = (() => {
+        if (metric === 'funds') {
+          return valueMode === 'cumulative' ? event.cumulativeFunds : event.fundsDelta;
+        }
+        return valueMode === 'cumulative' ? event.cumulativePoints : event.pointsDelta;
+      })();
       return Math.max(max, candidate);
     }, 0);
-    const safeMaxPoints = Math.max(maxPoints, 1);
-    const pointsRange = safeMaxPoints;
+    const safeMaxValue = Math.max(maxValue, 1);
+    const valueRange = safeMaxValue;
 
     const innerWidth = chartWidth - padding.left - padding.right;
     const innerHeight = chartHeight - padding.top - padding.bottom;
 
     const eventsWithPosition = events.map((event) => {
-      const yValue = yAxisMode === 'cumulative' ? event.cumulativePoints : event.pointsDelta;
+      const yValue = (() => {
+        if (metric === 'funds') {
+          return valueMode === 'cumulative' ? event.cumulativeFunds : event.fundsDelta;
+        }
+        return valueMode === 'cumulative' ? event.cumulativePoints : event.pointsDelta;
+      })();
       const x =
         padding.left +
         ((event.date.getTime() - minTime) / timeRange) * innerWidth;
       const y =
         chartHeight -
         padding.bottom -
-        (pointsRange === 0 ? 0 : (yValue / pointsRange) * innerHeight);
+        (valueRange === 0 ? 0 : (yValue / valueRange) * innerHeight);
 
       return {
         ...event,
@@ -231,25 +410,27 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
     }
 
     const yTicks: number[] = [];
-    if (pointsRange > 0) {
+    if (valueRange > 0) {
       yTicks.push(0);
-      const midPoint = Math.round(pointsRange / 2);
-      if (midPoint > 0 && midPoint < pointsRange) {
+      const midPoint = Math.round(valueRange / 2);
+      if (midPoint > 0 && midPoint < valueRange) {
         yTicks.push(midPoint);
       }
-      if (!yTicks.includes(pointsRange)) {
-        yTicks.push(pointsRange);
+      if (!yTicks.includes(valueRange)) {
+        yTicks.push(valueRange);
       }
     }
+
+    const yAxisLabel = computeYAxisLabel();
 
     return {
       events: filteredEvents,
       linePath,
       xTicks,
       yTicks,
-      yAxisLabel: yAxisMode === 'cumulative' ? 'Cumulative LEED Points' : 'LEED Points Earned per Milestone',
+      yAxisLabel,
     };
-  }, [eventFilter, milestones, scorecard, yAxisMode]);
+  }, [eventFilter, milestones, metric, payoutHistory, scorecard, valueMode]);
 
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const hoveredEvent = timeline.events.find((event) => event.id === hoveredEventId) || null;
@@ -286,16 +467,33 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
             </select>
           </label>
           <label className="flex items-center gap-2">
-            <span className="text-gray-500">Y-Axis</span>
+            <span className="text-gray-500">Metric</span>
             <select
-              value={yAxisMode}
+              value={metric}
               onChange={(event) =>
-                setYAxisMode(event.target.value === 'cumulative' ? 'cumulative' : 'individual')
+                setMetric(event.target.value === 'points' ? 'points' : 'funds')
               }
               className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="cumulative">Cumulative Points</option>
-              <option value="individual">Points per Milestone</option>
+              <option value="funds">Released Funds</option>
+              <option value="points">LEED Points</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="text-gray-500">Display</span>
+            <select
+              value={valueMode}
+              onChange={(event) =>
+                setValueMode(event.target.value === 'cumulative' ? 'cumulative' : 'individual')
+              }
+              className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="cumulative">
+                {metric === 'funds' ? 'Cumulative Released' : 'Cumulative Points'}
+              </option>
+              <option value="individual">
+                {metric === 'funds' ? 'Per Milestone Released' : 'Points per Milestone'}
+              </option>
             </select>
           </label>
         </div>
@@ -336,7 +534,8 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
               const y =
                 chartHeight -
                 padding.bottom -
-                ((tick / (timeline.yTicks[timeline.yTicks.length - 1] || 1)) * (chartHeight - padding.top - padding.bottom));
+                ((tick / (timeline.yTicks[timeline.yTicks.length - 1] || 1)) *
+                  (chartHeight - padding.top - padding.bottom));
               return (
                 <g key={`y-${tick}`}>
                   <line
@@ -353,7 +552,12 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
                     textAnchor="end"
                     className="fill-gray-500 text-xs"
                   >
-                    {tick}
+                    {metric === 'funds'
+                      ? `$${tick.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}`
+                      : tick}
                   </text>
                 </g>
               );
@@ -449,10 +653,31 @@ export default function ProjectTimeline({ milestones = [], scorecard, onSelectMi
               <p className="text-xs text-gray-500">{hoveredEvent.tooltipDate}</p>
               {hoveredEvent.type === 'verified' ? (
                 <div className="mt-3 rounded-md bg-green-50 px-3 py-2 text-xs text-green-700">
-                  <p className="font-medium">
-                    +{hoveredEvent.pointsDelta.toLocaleString()} LEED pts
-                  </p>
-                  <p>Cumulative: {hoveredEvent.cumulativePoints.toLocaleString()} pts</p>
+                  {hoveredEvent.pointsDelta > 0 && (
+                    <p className="font-medium">
+                      +{hoveredEvent.pointsDelta.toLocaleString()} LEED pts
+                    </p>
+                  )}
+                  {hoveredEvent.cumulativePoints > 0 && (
+                    <p>Cumulative: {hoveredEvent.cumulativePoints.toLocaleString()} pts</p>
+                  )}
+                  {hoveredEvent.fundsDelta > 0 && (
+                    <p className="mt-2 font-medium">
+                      +${hoveredEvent.fundsDelta.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  )}
+                  {hoveredEvent.cumulativeFunds > 0 && (
+                    <p>
+                      Released Total: $
+                      {hoveredEvent.cumulativeFunds.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <p className="mt-3 text-xs text-gray-500">
