@@ -54,6 +54,57 @@ let projectsData: Record<number, Project> = {
           { category: "Indoor Environmental Quality", points: 2 },
         ],
         leedHistoryId: null
+      },
+      {
+        id: 3,
+        name: "LED Lighting Retrofit",
+        description: "Upgrade all fixtures to LED with smart controls",
+        amount: "4",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 2 },
+          { category: "Indoor Environmental Quality", points: 1 },
+        ],
+        leedHistoryId: null
+      },
+      {
+        id: 4,
+        name: "Building Envelope Sealing",
+        description: "Air seal envelope to improve thermal performance",
+        amount: "3",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 2 },
+          { category: "Indoor Environmental Quality", points: 1 },
+        ],
+        leedHistoryId: null
+      },
+      {
+        id: 5,
+        name: "Commissioning & Training",
+        description: "Commission new systems and train facility staff",
+        amount: "3",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 2 },
+          { category: "Innovation", points: 1 },
+        ],
+        leedHistoryId: null
       }
     ],
     impactMetrics: {
@@ -173,6 +224,57 @@ let projectsData: Record<number, Project> = {
           { category: "Water Efficiency", points: 2 },
         ],
         leedHistoryId: null
+      },
+      {
+        id: 3,
+        name: "Low-Flow Fixture Upgrades",
+        description: "Install WaterSense-certified fixtures throughout units",
+        amount: "8",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Water Efficiency", points: 3 },
+          { category: "Indoor Environmental Quality", points: 1 },
+        ],
+        leedHistoryId: null
+      },
+      {
+        id: 4,
+        name: "Rooftop Solar Readiness",
+        description: "Prepare roof structure and conduits for future PV array",
+        amount: "6",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 2 },
+          { category: "Innovation", points: 1 },
+        ],
+        leedHistoryId: null
+      },
+      {
+        id: 5,
+        name: "Resident Engagement Program",
+        description: "Launch green living workshops and monitoring dashboards",
+        amount: "4",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Innovation", points: 2 },
+          { category: "Indoor Environmental Quality", points: 1 },
+        ],
+        leedHistoryId: null
       }
     ],
     impactMetrics: {
@@ -258,7 +360,93 @@ let projectsData: Record<number, Project> = {
     erc1155TokenId: "3",
     projectWalletAddress: "0x12a3b4C5d6E7f8A9b0C1D2e3F4567890AbCdEf12",
     projectWalletBalance: "0",
-    milestones: [],
+    milestones: [
+      {
+        id: 1,
+        name: "Historic Facade Restoration",
+        description: "Restore exterior masonry with thermally improved glazing",
+        amount: "20",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Materials & Resources", points: 2 },
+          { category: "Regional Priority", points: 1 },
+        ],
+        leedHistoryId: null
+      },
+      {
+        id: 2,
+        name: "Geothermal System Installation",
+        description: "Drill wells and install ground-source heat pumps",
+        amount: "35",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 4 },
+          { category: "Innovation", points: 1 },
+        ],
+        leedHistoryId: null
+      },
+      {
+        id: 3,
+        name: "Rainwater Harvesting System",
+        description: "Install cisterns and reuse system for non-potable demand",
+        amount: "12",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Water Efficiency", points: 3 },
+          { category: "Sustainable Sites", points: 1 },
+        ],
+        leedHistoryId: null
+      },
+      {
+        id: 4,
+        name: "Interior Daylighting Enhancements",
+        description: "Add light wells and reflective surfaces to improve daylight",
+        amount: "18",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Indoor Environmental Quality", points: 3 },
+          { category: "Innovation", points: 1 },
+        ],
+        leedHistoryId: null
+      },
+      {
+        id: 5,
+        name: "Smart Building Controls",
+        description: "Integrate BAS with monitoring and optimization analytics",
+        amount: "15",
+        completed: false,
+        verified: false,
+        completedAt: null,
+        verifiedAt: null,
+        proofHash: "",
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 3 },
+          { category: "Indoor Environmental Quality", points: 2 },
+        ],
+        leedHistoryId: null
+      }
+    ],
     impactMetrics: {
       annualCO2Reduction: 142,
       energySavings: 35,
