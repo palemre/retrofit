@@ -152,6 +152,7 @@ export default function AIAgentPanel({ project }: AIAgentPanelProps) {
   const [inputValue, setInputValue] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const projects = getAllProjects();
@@ -212,75 +213,92 @@ export default function AIAgentPanel({ project }: AIAgentPanelProps) {
 
   return (
     <section
-      className="fixed bottom-4 right-4 left-4 md:left-auto md:right-6 md:bottom-6 md:w-96 z-40 bg-white rounded-xl shadow-2xl p-6 border border-green-100"
+      className={`fixed bottom-4 right-4 left-4 md:left-auto md:right-6 md:bottom-6 md:w-96 z-40 bg-white rounded-xl shadow-2xl border border-green-100 transition-all ${isCollapsed ? 'p-4' : 'p-6'}`}
       role="complementary"
       aria-label="RetroFit Insight Agent"
     >
-      <div className="flex items-start justify-between gap-4 mb-4">
+      <div className={`flex items-start justify-between gap-4 ${isCollapsed ? '' : 'mb-4'}`}>
         <div>
           <h2 className="text-2xl font-bold text-gray-900">RetroFit Insight Agent</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Ask about funding performance, sustainability metrics, or benchmark this project against others in the pipeline.
-          </p>
+          {!isCollapsed && (
+            <p className="text-sm text-gray-600 mt-1">
+              Ask about funding performance, sustainability metrics, or benchmark this project against others in the pipeline.
+            </p>
+          )}
         </div>
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
-          Always-on
-        </span>
-      </div>
-
-      <div className="space-y-3 max-h-72 overflow-y-auto pr-1 mb-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`rounded-lg px-4 py-3 text-sm leading-relaxed ${message.sender === 'agent' ? 'bg-green-50 text-green-900 border border-green-100' : 'bg-gray-100 text-gray-900 self-end ml-auto'}`}
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700">
+            Always-on
+          </span>
+          <button
+            type="button"
+            onClick={() => setIsCollapsed((prev) => !prev)}
+            className="text-sm text-green-700 border border-green-200 rounded-lg px-3 py-1.5 hover:bg-green-50 transition"
+            aria-label={isCollapsed ? 'Expand RetroFit Insight Agent panel' : 'Collapse RetroFit Insight Agent panel'}
+            aria-expanded={!isCollapsed}
           >
-            {message.content.split('\n').map((line, index) => (
-              <p key={`${message.id}-${index}`} className="whitespace-pre-wrap">
-                {line}
-              </p>
-            ))}
-          </div>
-        ))}
-        {isThinking && (
-          <div className="rounded-lg px-4 py-3 text-sm bg-green-50 text-green-800 border border-green-100">
-            Thinking through portfolio data…
-          </div>
-        )}
-      </div>
-
-      <div className="mb-4">
-        <div className="text-xs uppercase font-semibold text-gray-500 mb-2">Quick questions</div>
-        <div className="flex flex-wrap gap-2">
-          {INITIAL_SUGGESTIONS.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              onClick={() => handleSuggestionClick(suggestion)}
-              className="text-sm px-3 py-2 rounded-full border border-green-200 text-green-700 hover:bg-green-50 transition"
-            >
-              {suggestion}
-            </button>
-          ))}
+            {isCollapsed ? 'Expand' : 'Collapse'}
+          </button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(event) => setInputValue(event.target.value)}
-          placeholder="Ask the agent about this project…"
-          className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-          aria-label="Ask the RetroFit Insight Agent"
-        />
-        <button
-          type="submit"
-          className="bg-green-600 text-white px-4 py-3 rounded-lg text-sm font-semibold hover:bg-green-700 transition disabled:bg-gray-300"
-          disabled={isThinking}
-        >
-          Send
-        </button>
-      </form>
+      {!isCollapsed && (
+        <>
+          <div className="space-y-3 max-h-72 overflow-y-auto pr-1 mb-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`rounded-lg px-4 py-3 text-sm leading-relaxed ${message.sender === 'agent' ? 'bg-green-50 text-green-900 border border-green-100' : 'bg-gray-100 text-gray-900 self-end ml-auto'}`}
+              >
+                {message.content.split('\n').map((line, index) => (
+                  <p key={`${message.id}-${index}`} className="whitespace-pre-wrap">
+                    {line}
+                  </p>
+                ))}
+              </div>
+            ))}
+            {isThinking && (
+              <div className="rounded-lg px-4 py-3 text-sm bg-green-50 text-green-800 border border-green-100">
+                Thinking through portfolio data…
+              </div>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <div className="text-xs uppercase font-semibold text-gray-500 mb-2">Quick questions</div>
+            <div className="flex flex-wrap gap-2">
+              {INITIAL_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => handleSuggestionClick(suggestion)}
+                  className="text-sm px-3 py-2 rounded-full border border-green-200 text-green-700 hover:bg-green-50 transition"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex gap-2">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(event) => setInputValue(event.target.value)}
+              placeholder="Ask the agent about this project…"
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              aria-label="Ask the RetroFit Insight Agent"
+            />
+            <button
+              type="submit"
+              className="bg-green-600 text-white px-4 py-3 rounded-lg text-sm font-semibold hover:bg-green-700 transition disabled:bg-gray-300"
+              disabled={isThinking}
+            >
+              Send
+            </button>
+          </form>
+        </>
+      )}
     </section>
   );
 }
