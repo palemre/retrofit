@@ -31,7 +31,12 @@ let projectsData: Record<number, Project> = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 4 },
+          { category: "Innovation", points: 1 },
+        ],
+        leedHistoryId: null
       },
       {
         id: 2,
@@ -43,7 +48,12 @@ let projectsData: Record<number, Project> = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 3 },
+          { category: "Indoor Environmental Quality", points: 2 },
+        ],
+        leedHistoryId: null
       }
     ],
     impactMetrics: {
@@ -107,6 +117,7 @@ let projectsData: Record<number, Project> = {
             notes: "Heat island mitigation aligns with NYSERDA regional priorities.",
           },
         ],
+        milestoneHistory: [],
       },
     },
     investmentHistory: [],
@@ -139,7 +150,12 @@ let projectsData: Record<number, Project> = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 5 },
+          { category: "Indoor Environmental Quality", points: 2 },
+        ],
+        leedHistoryId: null
       },
       {
         id: 2,
@@ -151,7 +167,12 @@ let projectsData: Record<number, Project> = {
         completedAt: null,
         verifiedAt: null,
         proofHash: "",
-        documents: []
+        documents: [],
+        leedPointContributions: [
+          { category: "Energy & Atmosphere", points: 3 },
+          { category: "Water Efficiency", points: 2 },
+        ],
+        leedHistoryId: null
       }
     ],
     impactMetrics: {
@@ -215,6 +236,7 @@ let projectsData: Record<number, Project> = {
             notes: "Regional stormwater priority pursued but not awarded.",
           },
         ],
+        milestoneHistory: [],
       },
     },
     investmentHistory: [],
@@ -296,6 +318,7 @@ let projectsData: Record<number, Project> = {
             notes: "Historic preservation and energy grid resiliency both prioritized regionally.",
           },
         ],
+        milestoneHistory: [],
       },
     },
     investmentHistory: [],
