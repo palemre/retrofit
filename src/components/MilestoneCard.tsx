@@ -7,11 +7,37 @@ interface MilestoneCardProps {
   milestone: Milestone;
   projectId: number;
   onMilestoneUpdate?: () => void;
+  isModalOpen?: boolean;
+  onModalToggle?: (isOpen: boolean) => void;
 }
 
-export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate }: MilestoneCardProps) {
+export default function MilestoneCard({
+  milestone,
+  projectId,
+  onMilestoneUpdate,
+  isModalOpen,
+  onModalToggle,
+}: MilestoneCardProps) {
   const [submittingAction, setSubmittingAction] = useState<'complete' | 'verify' | 'reset' | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [internalModalOpen, setInternalModalOpen] = useState(false);
+
+  const modalOpen = isModalOpen ?? internalModalOpen;
+
+  const openModal = () => {
+    if (onModalToggle) {
+      onModalToggle(true);
+    } else {
+      setInternalModalOpen(true);
+    }
+  };
+
+  const closeModal = () => {
+    if (onModalToggle) {
+      onModalToggle(false);
+    } else {
+      setInternalModalOpen(false);
+    }
+  };
 
   const isSubmitting = submittingAction !== null;
 
@@ -81,11 +107,11 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
         className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
         role="button"
         tabIndex={0}
-        onClick={() => setIsModalOpen(true)}
+        onClick={openModal}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
-            setIsModalOpen(true);
+            openModal();
           }
         }}
       >
@@ -170,13 +196,13 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
         </div>
       </div>
 
-      {isModalOpen && (
+      {modalOpen && (
         <div
           className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50 p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby={`milestone-${milestone.id}-title`}
-          onClick={() => setIsModalOpen(false)}
+          onClick={closeModal}
         >
           <div
             className="max-w-2xl w-full bg-white rounded-xl shadow-2xl p-6 relative"
@@ -191,7 +217,7 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
               >
                 ×
@@ -283,7 +309,7 @@ export default function MilestoneCard({ milestone, projectId, onMilestoneUpdate 
               )}
 
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={closeModal}
                 className="ml-auto text-sm text-gray-600 hover:text-gray-800 font-medium border border-gray-200 hover:border-gray-300 px-3 py-2 rounded-lg transition-colors"
               >
                 Close
